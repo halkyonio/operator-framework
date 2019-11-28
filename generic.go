@@ -24,17 +24,6 @@ type GenericReconciler struct {
 	helper   *K8SHelper
 }
 
-func (b *GenericReconciler) watchedSecondaryResourcesTypes() []runtime.Object {
-	resources := b.resource.GetDependentResourcesTypes()
-	watched := make([]runtime.Object, 0, len(resources))
-	for _, dep := range resources {
-		if dep.ShouldWatch() {
-			watched = append(watched, dep.Prototype())
-		}
-	}
-	return watched
-}
-
 func (b *GenericReconciler) Helper() *K8SHelper {
 	if b.helper == nil {
 		b.helper = GetHelperFor(b.resource.PrimaryResourceType())
@@ -146,7 +135,7 @@ func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 		IsController: true,
 		OwnerType:    resourceType,
 	}
-	for _, t := range reconciler.watchedSecondaryResourcesTypes() {
+	for _, t := range resource.GetWatchedResourcesTypes() {
 		if err = c.Watch(&source.Kind{Type: t}, owner); err != nil {
 			return err
 		}

@@ -74,8 +74,14 @@ func (b *BaseResource) FetchUpdatedDependent(dependentType string) (runtime.Obje
 	return fetch, nil
 }
 
-func (b *BaseResource) GetDependentResourcesTypes() []DependentResource {
-	return b.dependents
+func (b *BaseResource) GetWatchedResourcesTypes() []runtime.Object {
+	watched := make([]runtime.Object, 0, len(b.dependents))
+	for _, dep := range b.dependents {
+		if dep.ShouldWatch() {
+			watched = append(watched, dep.Prototype())
+		}
+	}
+	return watched
 }
 
 // AddDependentResource adds dependent resources to this base resource, keeping the order in which they are added, it is
