@@ -5,6 +5,7 @@ import (
 	"halkyon.io/operator-framework/util"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type Resource interface {
@@ -23,7 +24,8 @@ type Resource interface {
 	PrimaryResourceType() runtime.Object
 	Delete() error
 	CreateOrUpdate() error
-	GetWatchedResourcesTypes() []runtime.Object
+	GetWatchedResourcesTypes() []schema.GroupVersionKind
+	Helper() *K8SHelper
 }
 
 func HasChangedFromStatusUpdate(status interface{}, statuses []DependentResourceStatus, msg string) (changed bool, updatedMsg string) {

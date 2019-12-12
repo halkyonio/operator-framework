@@ -6,7 +6,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -17,7 +19,6 @@ type DependentResource interface {
 	Update(toUpdate runtime.Object) (bool, error)
 	Owner() Resource
 	GetTypeName() string
-	Prototype() runtime.Object
 	ShouldWatch() bool
 	CanBeCreatedOrUpdated() bool
 	CreateOrUpdate(helper *K8SHelper) error
@@ -26,6 +27,7 @@ type DependentResource interface {
 	OwnerStatusField() string
 	ShouldBeCheckedForReadiness() bool
 	NameFrom(underlying runtime.Object) string
+	GetGroupVersionKind() schema.GroupVersionKind
 }
 
 type DependentResourceStatus struct {
@@ -51,14 +53,25 @@ func NewReadyDependentResourceStatus(dependentName string, fieldName string) Dep
 }
 
 type DependentResourceHelper struct {
-	_owner     Resource
-	_prototype runtime.Object
-	_delegate  DependentResource
-	typeName   string
+	_owner    Resource
+	_delegate DependentResource
+	apiType   runtime.Object
+	gvk       *schema.GroupVersionKind
 }
 
 func (res DependentResourceHelper) GetTypeName() string {
-	return res.typeName
+	return util.GetObjectName(res.apiType)
+}
+
+func (res *DependentResourceHelper) GetGroupVersionKind() schema.GroupVersionKind {
+	if res.gvk == nil {
+		gvk, err := apiutil.GVKForObject(res.apiType, res.Owner().Helper().Scheme)
+		if err != nil {
+			panic(err)
+		}
+		res.gvk = &gvk
+	}
+	return *res.gvk
 }
 
 func (res DependentResourceHelper) IsReady(underlying runtime.Object) (ready bool, message string) {
@@ -90,7 +103,7 @@ func (res DependentResourceHelper) CanBeCreatedOrUpdated() bool {
 }
 
 func NewDependentResource(resourceType runtime.Object, owner Resource) *DependentResourceHelper {
-	return &DependentResourceHelper{_prototype: resourceType, _owner: owner, typeName: util.GetObjectName(resourceType)}
+	return &DependentResourceHelper{_owner: owner, apiType: resourceType}
 }
 
 func (res *DependentResourceHelper) SetDelegate(delegate DependentResource) {
@@ -103,7 +116,10 @@ func (res DependentResourceHelper) Name() string {
 
 func (res DependentResourceHelper) Fetch(helper *K8SHelper) (runtime.Object, error) {
 	delegate := res._delegate
-	into := delegate.Prototype()
+	into, err := helper.Scheme.New(delegate.GetGroupVersionKind())
+	if err != nil {
+		return nil, err
+	}
 	if err := helper.Client.Get(context.TODO(), types.NamespacedName{Name: delegate.Name(), Namespace: delegate.Owner().GetNamespace()}, into); err != nil {
 		return nil, err
 	}
@@ -114,17 +130,11 @@ func (res DependentResourceHelper) Owner() Resource {
 	return res._owner
 }
 
-func (res DependentResourceHelper) Prototype() runtime.Object {
-	return res._prototype.DeepCopyObject()
-}
-
 func DefaultDependentResourceNameFor(owner Resource) string {
 	return owner.GetName()
 }
 
-func (res DependentResourceHelper) CreateOrUpdate(helper *K8SHelper) error {
-	r := res._delegate
-
+func CreateOrUpdate(r DependentResource, helper *K8SHelper) error {
 	// if the resource specifies that it shouldn't be created, exit fast
 	if !r.CanBeCreatedOrUpdated() {
 		return nil
@@ -179,4 +189,8 @@ func (res DependentResourceHelper) CreateOrUpdate(helper *K8SHelper) error {
 		}
 		return err
 	}
+}
+
+func (res DependentResourceHelper) CreateOrUpdate(helper *K8SHelper) error {
+	return CreateOrUpdate(res._delegate, helper)
 }

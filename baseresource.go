@@ -3,6 +3,7 @@ package framework
 import (
 	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strings"
 )
 
@@ -74,11 +75,11 @@ func (b *BaseResource) FetchUpdatedDependent(dependentType string) (runtime.Obje
 	return fetch, nil
 }
 
-func (b *BaseResource) GetWatchedResourcesTypes() []runtime.Object {
-	watched := make([]runtime.Object, 0, len(b.dependents))
+func (b *BaseResource) GetWatchedResourcesTypes() []schema.GroupVersionKind {
+	watched := make([]schema.GroupVersionKind, 0, len(b.dependents))
 	for _, dep := range b.dependents {
 		if dep.ShouldWatch() {
-			watched = append(watched, dep.Prototype())
+			watched = append(watched, dep.GetGroupVersionKind())
 		}
 	}
 	return watched

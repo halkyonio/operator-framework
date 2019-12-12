@@ -6,7 +6,10 @@ import (
 	"github.com/go-logr/logr"
 	"halkyon.io/operator-framework/util"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -114,6 +117,13 @@ func (b *GenericReconciler) updateStatusIfNeeded(instance Resource, err error) {
 func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 	resourceType := resource.PrimaryResourceType()
 
+	// initialize the GVK for this resource type
+	gvk, err := apiutil.GVKForObject(resourceType, mgr.GetScheme())
+	if err != nil {
+		return err
+	}
+	resourceType.GetObjectKind().SetGroupVersionKind(gvk)
+
 	// Create a new controller
 	controllerName := controllerNameFor(resourceType)
 	reconciler := NewGenericReconciler(resource)
@@ -136,7 +146,7 @@ func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 		OwnerType:    resourceType,
 	}
 	for _, t := range resource.GetWatchedResourcesTypes() {
-		if err = c.Watch(&source.Kind{Type: t}, owner); err != nil {
+		if err = c.Watch(createSourceForGVK(t), owner); err != nil {
 			return err
 		}
 	}
@@ -146,4 +156,11 @@ func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 
 func controllerNameFor(resource runtime.Object) string {
 	return strings.ToLower(util.GetObjectName(resource)) + "-controller"
+}
+
+// createSourceForGVK creates a *source.Kind for the given gvk.
+func createSourceForGVK(gvk schema.GroupVersionKind) *source.Kind {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(gvk)
+	return &source.Kind{Type: u}
 }
