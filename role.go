@@ -11,6 +11,8 @@ type Role struct {
 	namer func() string
 }
 
+var _ DependentResource = &Role{}
+
 func (res Role) Update(toUpdate runtime.Object) (bool, error) {
 	return false, nil
 }

@@ -13,6 +13,8 @@ type RoleBinding struct {
 	serviceAccountNamer func() string
 }
 
+var _ DependentResource = &RoleBinding{}
+
 func (res RoleBinding) Update(toUpdate runtime.Object) (bool, error) {
 	// add appropriate subject for owner
 	rb := toUpdate.(*authorizv1.RoleBinding)
