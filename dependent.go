@@ -7,7 +7,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -120,10 +119,7 @@ func (res DependentResourceHelper) Fetch(helper *K8SHelper) (runtime.Object, err
 	if err != nil {
 		return nil, err
 	}
-	if err := helper.Client.Get(context.TODO(), types.NamespacedName{Name: delegate.Name(), Namespace: delegate.Owner().GetNamespace()}, into); err != nil {
-		return nil, err
-	}
-	return into, nil
+	return helper.Fetch(delegate.Name(), delegate.Owner().GetNamespace(), into)
 }
 
 func (res DependentResourceHelper) Owner() Resource {
