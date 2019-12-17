@@ -158,9 +158,23 @@ func controllerNameFor(resource runtime.Object) string {
 	return strings.ToLower(util.GetObjectName(resource)) + "-controller"
 }
 
+func CreateUnstructuredObject(from runtime.Object, gvk schema.GroupVersionKind) (runtime.Object, error) {
+	u, err := runtime.DefaultUnstructuredConverter.ToUnstructured(from)
+	if err != nil {
+		return nil, err
+	}
+	obj := CreateEmptyUnstructured(gvk)
+	obj.Object = u
+	return obj, nil
+}
+
 // createSourceForGVK creates a *source.Kind for the given gvk.
 func createSourceForGVK(gvk schema.GroupVersionKind) *source.Kind {
+	return &source.Kind{Type: CreateEmptyUnstructured(gvk)}
+}
+
+func CreateEmptyUnstructured(gvk schema.GroupVersionKind) *unstructured.Unstructured {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(gvk)
-	return &source.Kind{Type: u}
+	return u
 }
