@@ -2,14 +2,14 @@ package framework
 
 import (
 	"fmt"
+	"halkyon.io/api/v1beta1"
 	"halkyon.io/operator-framework/util"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type Resource interface {
-	v1.Object
+	v1beta1.HalkyonResource
 	runtime.Object
 	NeedsRequeue() bool
 	GetStatusAsString() string

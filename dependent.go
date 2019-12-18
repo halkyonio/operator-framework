@@ -2,6 +2,7 @@ package framework
 
 import (
 	"context"
+	"halkyon.io/api/v1beta1"
 	"halkyon.io/operator-framework/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +17,7 @@ type DependentResource interface {
 	Fetch(helper *K8SHelper) (runtime.Object, error)
 	Build() (runtime.Object, error)
 	Update(toUpdate runtime.Object) (bool, error)
-	Owner() Resource
+	Owner() v1beta1.HalkyonResource
 	GetTypeName() string
 	ShouldWatch() bool
 	CanBeCreatedOrUpdated() bool
@@ -64,7 +65,7 @@ func (res DependentResourceHelper) GetTypeName() string {
 
 func (res *DependentResourceHelper) GetGroupVersionKind() schema.GroupVersionKind {
 	if res.gvk == nil {
-		gvk, err := apiutil.GVKForObject(res.apiType, res.Owner().Helper().Scheme)
+		gvk, err := apiutil.GVKForObject(res.apiType, res._owner.Helper().Scheme)
 		if err != nil {
 			panic(err)
 		}
@@ -122,11 +123,15 @@ func (res DependentResourceHelper) Fetch(helper *K8SHelper) (runtime.Object, err
 	return helper.Fetch(delegate.Name(), delegate.Owner().GetNamespace(), into)
 }
 
-func (res DependentResourceHelper) Owner() Resource {
+func (res DependentResourceHelper) Owner() v1beta1.HalkyonResource {
 	return res._owner
 }
 
-func DefaultDependentResourceNameFor(owner Resource) string {
+func (res DependentResourceHelper) OwnerAsResource() Resource {
+	return res._owner
+}
+
+func DefaultDependentResourceNameFor(owner v1beta1.HalkyonResource) string {
 	return owner.GetName()
 }
 
@@ -150,7 +155,7 @@ func CreateOrUpdate(r DependentResource, helper *K8SHelper) error {
 			if r.ShouldBeOwned() {
 				// in most instances, resourceDefinedOwner == owner but some resources might want to return a different one
 				resourceDefinedOwner := r.Owner()
-				if e := controllerutil.SetControllerReference(resourceDefinedOwner.GetAPIObject().(v1.Object), obj.(v1.Object), helper.Scheme); e != nil {
+				if e := controllerutil.SetControllerReference(resourceDefinedOwner, obj.(v1.Object), helper.Scheme); e != nil {
 					helper.ReqLogger.Error(err, "Failed to set owner", "owner", resourceDefinedOwner, "resource", r.Name())
 					return e
 				}
