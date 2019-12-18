@@ -163,8 +163,8 @@ func CreateUnstructuredObject(from runtime.Object, gvk schema.GroupVersionKind) 
 	if err != nil {
 		return nil, err
 	}
-	obj := CreateEmptyUnstructured(gvk)
-	obj.Object = u
+	obj := &unstructured.Unstructured{Object: u}
+	obj.SetGroupVersionKind(gvk)
 	return obj, nil
 }
 
