@@ -65,7 +65,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	if resource.Init() {
-		if e := b.Helper().Client.Update(context.Background(), resource.GetAPIObject()); e != nil {
+		if e := b.Helper().Client.Update(context.Background(), resource.GetAsHalkyonResource()); e != nil {
 			b.logger().Error(e, fmt.Sprintf("failed to update '%s' %s", resource.GetName(), typeName))
 		}
 		return reconcile.Result{}, nil
@@ -104,10 +104,10 @@ func (b *GenericReconciler) updateStatusIfNeeded(instance Resource, err error) {
 		updateStatus = instance.ComputeStatus()
 	} else {
 		updateStatus = instance.SetErrorStatus(err)
-		b.logger().Error(err, fmt.Sprintf("'%s' %s has an error", instance.GetName(), util.GetObjectName(instance.GetAPIObject())))
+		b.logger().Error(err, fmt.Sprintf("'%s' %s has an error", instance.GetName(), util.GetObjectName(instance.GetAsHalkyonResource())))
 	}
 	if updateStatus {
-		object := instance.GetAPIObject()
+		object := instance.GetAsHalkyonResource()
 		if e := b.Helper().Client.Status().Update(context.Background(), object); e != nil {
 			b.logger().Error(e, fmt.Sprintf("failed to update status for '%s' %s", instance.GetName(), util.GetObjectName(object)))
 		}

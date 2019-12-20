@@ -49,7 +49,7 @@ func (b *BaseResource) CreateOrUpdateDependents() error {
 func (b *BaseResource) FetchAndInitNewResource(name string, namespace string, toInit Resource) (Resource, error) {
 	toInit.SetName(name)
 	toInit.SetNamespace(namespace)
-	resourceType := toInit.GetAPIObject()
+	resourceType := toInit.GetAsHalkyonResource()
 	_, err := b.Helper().Fetch(name, namespace, resourceType)
 	if err != nil {
 		return toInit, err

@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"halkyon.io/api/v1beta1"
 	"halkyon.io/operator-framework/util"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type Resource interface {
-	v1beta1.HalkyonResource
+	v1.Object
 	runtime.Object
 	NeedsRequeue() bool
 	GetStatusAsString() string
@@ -19,7 +20,7 @@ type Resource interface {
 	ComputeStatus() (needsUpdate bool)
 	CheckValidity() error
 	Init() bool
-	GetAPIObject() runtime.Object
+	GetAsHalkyonResource() v1beta1.HalkyonResource
 	FetchAndCreateNew(name, namespace string) (Resource, error)
 	PrimaryResourceType() runtime.Object
 	Delete() error

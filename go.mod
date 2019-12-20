@@ -4,11 +4,12 @@ go 1.13
 
 require (
 	github.com/go-logr/logr v0.1.0
-	halkyon.io/api v1.0.0-beta.8
+	halkyon.io/api v1.0.0-beta.8.0.20191219201020-14dfa325eab8
 	k8s.io/api v0.0.0-20190918195907-bd6ac527cfd2
-	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
+	k8s.io/apimachinery v0.17.0
 	k8s.io/client-go v11.0.1-0.20190805182715-88a2adca7e76+incompatible
-	k8s.io/code-generator v0.0.0-20191107025440-35a828233ddd // indirect
+	k8s.io/code-generator v0.17.0 // indirect
+	k8s.io/gengo v0.0.0-20191120174120-e74f70b9b27e // indirect
 	sigs.k8s.io/controller-runtime v0.3.0
 )
 

@@ -124,7 +124,7 @@ func (res DependentResourceHelper) Fetch(helper *K8SHelper) (runtime.Object, err
 }
 
 func (res DependentResourceHelper) Owner() v1beta1.HalkyonResource {
-	return res._owner
+	return res._owner.GetAsHalkyonResource()
 }
 
 func (res DependentResourceHelper) OwnerAsResource() Resource {
