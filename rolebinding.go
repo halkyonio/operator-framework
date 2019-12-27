@@ -7,10 +7,22 @@ import (
 )
 
 type RoleBinding struct {
-	*DependentResourceHelper
+	*BaseDependentResource
 	namer               func() string
 	associatedRoleNamer func() string
 	serviceAccountNamer func() string
+}
+
+func (res RoleBinding) NameFrom(underlying runtime.Object) string {
+	return DefaultNameFrom(res, underlying)
+}
+
+func (res RoleBinding) Fetch(helper *K8SHelper) (runtime.Object, error) {
+	return DefaultFetcher(res, helper)
+}
+
+func (res RoleBinding) IsReady(underlying runtime.Object) (ready bool, message string) {
+	return DefaultIsReady(underlying)
 }
 
 var _ DependentResource = &RoleBinding{}
@@ -47,15 +59,14 @@ func (res RoleBinding) NewInstanceWith(owner Resource) DependentResource {
 }
 
 func NewOwnedRoleBinding(owner Resource, namer, associatedRoleNamer, serviceAccountNamer func() string) RoleBinding {
-	dependent := NewDependentResource(&authorizv1.RoleBinding{}, owner)
-	rolebinding := RoleBinding{
-		DependentResourceHelper: dependent,
-		namer:                   namer,
-		associatedRoleNamer:     associatedRoleNamer,
-		serviceAccountNamer:     serviceAccountNamer,
+	binding := RoleBinding{
+		BaseDependentResource: NewBaseDependentResource(&authorizv1.RoleBinding{}, owner),
+		namer:                 namer,
+		associatedRoleNamer:   associatedRoleNamer,
+		serviceAccountNamer:   serviceAccountNamer,
 	}
-	dependent.SetDelegate(rolebinding)
-	return rolebinding
+	binding.config.Watched = false
+	return binding
 }
 
 func (res RoleBinding) Name() string {
@@ -79,8 +90,4 @@ func (res RoleBinding) Build() (runtime.Object, error) {
 		},
 	}
 	return ser, nil
-}
-
-func (res RoleBinding) ShouldWatch() bool {
-	return false
 }

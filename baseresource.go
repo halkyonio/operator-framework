@@ -39,8 +39,8 @@ func NewHasDependents(primary runtime.Object) *BaseResource {
 
 func (b *BaseResource) CreateOrUpdateDependents() error {
 	for _, dep := range b.dependents {
-		if e := dep.CreateOrUpdate(b.Helper()); e != nil {
-			return fmt.Errorf("failed to create or update '%s' %s: %s", dep.Name(), dep.GetTypeName(), e.Error())
+		if e := CreateOrUpdate(dep, b.Helper()); e != nil {
+			return fmt.Errorf("failed to create or update '%s' %s: %s", dep.Name(), dep.GetConfig().TypeName(), e.Error())
 		}
 	}
 	return nil
@@ -60,7 +60,7 @@ func (b *BaseResource) FetchAndInitNewResource(name string, namespace string, to
 func (b *BaseResource) FetchUpdatedDependent(dependentType string) (runtime.Object, error) {
 	var dependent DependentResource
 	for _, d := range b.dependents {
-		if d.GetTypeName() == dependentType {
+		if d.GetConfig().TypeName() == dependentType {
 			dependent = d
 			break
 		}
@@ -78,8 +78,8 @@ func (b *BaseResource) FetchUpdatedDependent(dependentType string) (runtime.Obje
 func (b *BaseResource) GetWatchedResourcesTypes() []schema.GroupVersionKind {
 	watched := make([]schema.GroupVersionKind, 0, len(b.dependents))
 	for _, dep := range b.dependents {
-		if dep.ShouldWatch() {
-			watched = append(watched, dep.GetGroupVersionKind())
+		if dep.GetConfig().Watched {
+			watched = append(watched, dep.GetConfig().GroupVersionKind)
 		}
 	}
 	return watched
@@ -119,8 +119,9 @@ func (b *BaseResource) ComputeStatus(current Resource) (statuses []DependentReso
 func (b *BaseResource) areDependentResourcesReady() (statuses []DependentResourceStatus) {
 	statuses = make([]DependentResourceStatus, 0, len(b.dependents))
 	for _, dependent := range b.dependents {
-		if dependent.ShouldBeCheckedForReadiness() {
-			name := dependent.GetTypeName()
+		config := dependent.GetConfig()
+		if config.CheckedForReadiness {
+			name := config.TypeName()
 			fetched, err := b.FetchUpdatedDependent(name)
 			if err != nil {
 				statuses = append(statuses, NewFailedDependentResourceStatus(name, err))
@@ -129,7 +130,7 @@ func (b *BaseResource) areDependentResourcesReady() (statuses []DependentResourc
 				if !ready {
 					statuses = append(statuses, NewFailedDependentResourceStatus(name, message))
 				} else {
-					statuses = append(statuses, NewReadyDependentResourceStatus(dependent.NameFrom(fetched), dependent.OwnerStatusField()))
+					statuses = append(statuses, NewReadyDependentResourceStatus(dependent.NameFrom(fetched), config.OwnerStatusField))
 				}
 			}
 		}

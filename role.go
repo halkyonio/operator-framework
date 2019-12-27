@@ -7,8 +7,20 @@ import (
 )
 
 type Role struct {
-	*DependentResourceHelper
+	*BaseDependentResource
 	namer func() string
+}
+
+func (res Role) NameFrom(underlying runtime.Object) string {
+	return DefaultNameFrom(res, underlying)
+}
+
+func (res Role) Fetch(helper *K8SHelper) (runtime.Object, error) {
+	return DefaultFetcher(res, helper)
+}
+
+func (res Role) IsReady(underlying runtime.Object) (ready bool, message string) {
+	return DefaultIsReady(underlying)
 }
 
 var _ DependentResource = &Role{}
@@ -18,9 +30,8 @@ func (res Role) Update(toUpdate runtime.Object) (bool, error) {
 }
 
 func NewOwnedRole(owner Resource, namerFn func() string) Role {
-	dependent := NewDependentResource(&authorizv1.Role{}, owner)
-	role := Role{DependentResourceHelper: dependent, namer: namerFn}
-	dependent.SetDelegate(role)
+	role := Role{BaseDependentResource: NewBaseDependentResource(&authorizv1.Role{}, owner), namer: namerFn}
+	role.config.Watched = false
 	return role
 }
 
@@ -45,8 +56,4 @@ func (res Role) Build() (runtime.Object, error) {
 		},
 	}
 	return ser, nil
-}
-
-func (res Role) ShouldWatch() bool {
-	return false
 }
