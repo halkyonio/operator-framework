@@ -1,9 +1,9 @@
 package framework
 
 import (
+	"halkyon.io/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 type DependentResourceConfig struct {
@@ -24,12 +24,8 @@ var defaultConfig = DependentResourceConfig{
 	OwnerStatusField:    "",
 }
 
-func NewConfigFrom(objectType runtime.Object, owner Resource) DependentResourceConfig {
-	gvk, err := apiutil.GVKForObject(objectType, owner.Helper().Scheme)
-	if err != nil {
-		panic(err)
-	}
-	return NewConfig(gvk, owner.GetNamespace())
+func NewConfigFrom(objectType runtime.Object, owner v1beta1.HalkyonResource) DependentResourceConfig {
+	return NewConfig(objectType.GetObjectKind().GroupVersionKind(), owner.GetNamespace())
 }
 
 func NewConfig(gvk schema.GroupVersionKind, ns string) DependentResourceConfig {

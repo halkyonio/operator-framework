@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"halkyon.io/api/v1beta1"
 	authorizv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -54,11 +55,11 @@ func (res RoleBinding) Update(toUpdate runtime.Object) (bool, error) {
 	return !found, nil
 }
 
-func (res RoleBinding) NewInstanceWith(owner Resource) DependentResource {
+func (res RoleBinding) NewInstanceWith(owner v1beta1.HalkyonResource) DependentResource {
 	return NewOwnedRoleBinding(owner, res.namer, res.associatedRoleNamer, res.serviceAccountNamer)
 }
 
-func NewOwnedRoleBinding(owner Resource, namer, associatedRoleNamer, serviceAccountNamer func() string) RoleBinding {
+func NewOwnedRoleBinding(owner v1beta1.HalkyonResource, namer, associatedRoleNamer, serviceAccountNamer func() string) RoleBinding {
 	binding := RoleBinding{
 		BaseDependentResource: NewBaseDependentResource(&authorizv1.RoleBinding{}, owner),
 		namer:                 namer,

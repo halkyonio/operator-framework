@@ -10,11 +10,14 @@ type BaseDependentResource struct {
 	owner  v1beta1.HalkyonResource
 }
 
-func NewBaseDependentResource(objectType runtime.Object, owner Resource) *BaseDependentResource {
-	config := NewConfigFrom(objectType, owner)
+func NewBaseDependentResource(objectType runtime.Object, owner v1beta1.HalkyonResource) *BaseDependentResource {
+	return NewConfiguredBaseDependentResource(owner, NewConfigFrom(objectType, owner))
+}
+
+func NewConfiguredBaseDependentResource(owner v1beta1.HalkyonResource, config DependentResourceConfig) *BaseDependentResource {
 	return &BaseDependentResource{
 		config: config,
-		owner:  owner.GetAsHalkyonResource(),
+		owner:  owner,
 	}
 }
 

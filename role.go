@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"halkyon.io/api/v1beta1"
 	authorizv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,7 +30,7 @@ func (res Role) Update(toUpdate runtime.Object) (bool, error) {
 	return false, nil
 }
 
-func NewOwnedRole(owner Resource, namerFn func() string) Role {
+func NewOwnedRole(owner v1beta1.HalkyonResource, namerFn func() string) Role {
 	role := Role{BaseDependentResource: NewBaseDependentResource(&authorizv1.Role{}, owner), namer: namerFn}
 	role.config.Watched = false
 	return role
