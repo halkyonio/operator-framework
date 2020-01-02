@@ -73,21 +73,22 @@ func (res RoleBinding) Name() string {
 	return res.namer()
 }
 
-func (res RoleBinding) Build() (runtime.Object, error) {
-	c := res.Owner()
-	namespace := c.GetNamespace()
-	ser := &authorizv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
+func (res RoleBinding) Build(empty bool) (runtime.Object, error) {
+	ser := &authorizv1.RoleBinding{}
+	if !empty {
+		c := res.Owner()
+		namespace := c.GetNamespace()
+		ser.ObjectMeta = metav1.ObjectMeta{
 			Name:      res.Name(),
 			Namespace: namespace,
-		},
-		RoleRef: authorizv1.RoleRef{
+		}
+		ser.RoleRef = authorizv1.RoleRef{
 			Kind: "Role",
 			Name: res.associatedRoleNamer(),
-		},
-		Subjects: []authorizv1.Subject{
+		}
+		ser.Subjects = []authorizv1.Subject{
 			{Kind: "ServiceAccount", Name: res.serviceAccountNamer(), Namespace: namespace},
-		},
+		}
 	}
 	return ser, nil
 }

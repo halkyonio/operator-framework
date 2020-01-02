@@ -14,7 +14,7 @@ type DependentResource interface {
 	Owner() v1beta1.HalkyonResource
 	NameFrom(underlying runtime.Object) string
 	Fetch(helper *K8SHelper) (runtime.Object, error)
-	Build() (runtime.Object, error)
+	Build(empty bool) (runtime.Object, error)
 	Update(toUpdate runtime.Object) (bool, error)
 	IsReady(underlying runtime.Object) (ready bool, message string)
 	GetConfig() DependentResourceConfig
@@ -53,7 +53,7 @@ func CreateOrUpdate(r DependentResource, helper *K8SHelper) error {
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// create the object
-			obj, errBuildObject := r.Build()
+			obj, errBuildObject := r.Build(false)
 			if errBuildObject != nil {
 				return errBuildObject
 			}

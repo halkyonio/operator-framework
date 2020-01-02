@@ -39,21 +39,22 @@ func (res Role) Name() string {
 	return res.namer()
 }
 
-func (res Role) Build() (runtime.Object, error) {
-	c := res.Owner()
-	ser := &authorizv1.Role{
-		ObjectMeta: metav1.ObjectMeta{
+func (res Role) Build(empty bool) (runtime.Object, error) {
+	ser := &authorizv1.Role{}
+	if !empty {
+		c := res.Owner()
+		ser.ObjectMeta = metav1.ObjectMeta{
 			Name:      res.Name(),
 			Namespace: c.GetNamespace(),
-		},
-		Rules: []authorizv1.PolicyRule{
+		}
+		ser.Rules = []authorizv1.PolicyRule{
 			{
 				APIGroups:     []string{"security.openshift.io"},
 				Resources:     []string{"securitycontextconstraints"},
 				ResourceNames: []string{"privileged"},
 				Verbs:         []string{"use"},
 			},
-		},
+		}
 	}
 	return ser, nil
 }
