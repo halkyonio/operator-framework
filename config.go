@@ -1,8 +1,6 @@
 package framework
 
 import (
-	"halkyon.io/api/v1beta1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -22,10 +20,6 @@ var defaultConfig = DependentResourceConfig{
 	CreatedOrUpdated:    true,
 	CheckedForReadiness: false,
 	OwnerStatusField:    "",
-}
-
-func NewConfigFrom(objectType runtime.Object, owner v1beta1.HalkyonResource) DependentResourceConfig {
-	return NewConfig(objectType.GetObjectKind().GroupVersionKind(), owner.GetNamespace())
 }
 
 func NewConfig(gvk schema.GroupVersionKind, ns string) DependentResourceConfig {

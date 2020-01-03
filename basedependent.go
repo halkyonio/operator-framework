@@ -3,6 +3,7 @@ package framework
 import (
 	"halkyon.io/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type BaseDependentResource struct {
@@ -10,8 +11,8 @@ type BaseDependentResource struct {
 	owner  v1beta1.HalkyonResource
 }
 
-func NewBaseDependentResource(objectType runtime.Object, owner v1beta1.HalkyonResource) *BaseDependentResource {
-	return NewConfiguredBaseDependentResource(owner, NewConfigFrom(objectType, owner))
+func NewBaseDependentResource(owner v1beta1.HalkyonResource, dependentType schema.GroupVersionKind) *BaseDependentResource {
+	return NewConfiguredBaseDependentResource(owner, NewConfig(dependentType, owner.GetNamespace()))
 }
 
 func NewConfiguredBaseDependentResource(owner v1beta1.HalkyonResource, config DependentResourceConfig) *BaseDependentResource {

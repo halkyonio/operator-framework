@@ -7,6 +7,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+var RoleGVK = authorizv1.SchemeGroupVersion.WithKind("Role")
+
 type Role struct {
 	*BaseDependentResource
 	namer func() string
@@ -31,7 +33,7 @@ func (res Role) Update(toUpdate runtime.Object) (bool, error) {
 }
 
 func NewOwnedRole(owner v1beta1.HalkyonResource, namerFn func() string) Role {
-	role := Role{BaseDependentResource: NewBaseDependentResource(&authorizv1.Role{}, owner), namer: namerFn}
+	role := Role{BaseDependentResource: NewBaseDependentResource(owner, RoleGVK), namer: namerFn}
 	role.config.Watched = false
 	return role
 }

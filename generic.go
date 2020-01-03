@@ -135,6 +135,9 @@ func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 	// Register helper
 	registerHelper(controllerName, resourceType, mgr)
 
+	// init dependents, they might need helper
+	resource.InitDependents()
+
 	// Watch for changes to primary resource
 	if err = c.Watch(&source.Kind{Type: resourceType}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err

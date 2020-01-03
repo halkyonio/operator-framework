@@ -7,6 +7,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+var RoleBindingGVK = authorizv1.SchemeGroupVersion.WithKind("RoleBinding")
+
 type RoleBinding struct {
 	*BaseDependentResource
 	namer               func() string
@@ -61,7 +63,7 @@ func (res RoleBinding) NewInstanceWith(owner v1beta1.HalkyonResource) DependentR
 
 func NewOwnedRoleBinding(owner v1beta1.HalkyonResource, namer, associatedRoleNamer, serviceAccountNamer func() string) RoleBinding {
 	binding := RoleBinding{
-		BaseDependentResource: NewBaseDependentResource(&authorizv1.RoleBinding{}, owner),
+		BaseDependentResource: NewBaseDependentResource(owner, RoleBindingGVK),
 		namer:                 namer,
 		associatedRoleNamer:   associatedRoleNamer,
 		serviceAccountNamer:   serviceAccountNamer,

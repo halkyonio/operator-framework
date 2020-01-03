@@ -3,7 +3,9 @@ package util
 import (
 	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 func GetImageReference(imageName string, version ...string) string {
@@ -39,4 +41,12 @@ func GetObjectName(object runtime.Object) string {
 		t = t.Elem()
 	}
 	return t.Name()
+}
+
+func GetGVKFor(object runtime.Object, scheme *runtime.Scheme) schema.GroupVersionKind {
+	gvk, err := apiutil.GVKForObject(object, scheme)
+	if err != nil {
+		panic(err)
+	}
+	return gvk
 }

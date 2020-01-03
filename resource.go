@@ -12,6 +12,7 @@ import (
 type Resource interface {
 	v1.Object
 	runtime.Object
+	InitDependents()
 	NeedsRequeue() bool
 	GetStatusAsString() string
 	ShouldDelete() bool
