@@ -42,7 +42,7 @@ func registerHelper(nameForLogger string, resourceType runtime.Object, mgr manag
 		ReqLogger: log.Log.WithName(nameForLogger),
 	}
 	helpers[util.GetObjectName(resourceType)] = helper
-	checkIfOpenShift(config)
+	CheckIfOpenShift(config)
 	return helper
 }
 

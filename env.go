@@ -20,7 +20,7 @@ func IsTargetClusterRunningOpenShift() bool {
 	return *onOpenShift
 }
 
-func checkIfOpenShift(config *rest.Config) {
+func CheckIfOpenShift(config *rest.Config) {
 	if onOpenShift == nil {
 		discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
 		if err != nil {
