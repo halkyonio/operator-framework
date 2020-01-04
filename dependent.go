@@ -48,7 +48,7 @@ func CreateOrUpdate(r DependentResource, helper *K8SHelper) error {
 		return nil
 	}
 
-	kind := r.GetConfig().TypeName
+	kind := r.GetConfig().TypeName()
 	object, err := r.Fetch(helper)
 	if err != nil {
 		if errors.IsNotFound(err) {
