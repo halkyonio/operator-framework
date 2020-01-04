@@ -136,7 +136,7 @@ func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 	registerHelper(controllerName, resourceType, mgr)
 
 	// init dependents, they might need helper
-	resource.InitDependents()
+	dependents := resource.InitDependents()
 
 	// Watch for changes to primary resource
 	if err = c.Watch(&source.Kind{Type: resourceType}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -148,9 +148,12 @@ func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 		IsController: true,
 		OwnerType:    resourceType,
 	}
-	for _, t := range resource.GetWatchedResourcesTypes() {
-		if err = c.Watch(createSourceForGVK(t), owner); err != nil {
-			return err
+	for _, dependent := range dependents {
+		config := dependent.GetConfig()
+		if config.Watched {
+			if err = c.Watch(createSourceForGVK(config.GroupVersionKind), owner); err != nil {
+				return err
+			}
 		}
 	}
 

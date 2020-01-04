@@ -6,13 +6,12 @@ import (
 	"halkyon.io/operator-framework/util"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type Resource interface {
 	v1.Object
 	runtime.Object
-	InitDependents()
+	InitDependents() []DependentResource
 	NeedsRequeue() bool
 	GetStatusAsString() string
 	ShouldDelete() bool
@@ -26,7 +25,6 @@ type Resource interface {
 	PrimaryResourceType() runtime.Object
 	Delete() error
 	CreateOrUpdate() error
-	GetWatchedResourcesTypes() []schema.GroupVersionKind
 	Helper() *K8SHelper
 }
 

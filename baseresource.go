@@ -3,7 +3,6 @@ package framework
 import (
 	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strings"
 )
 
@@ -73,16 +72,6 @@ func (b *BaseResource) FetchUpdatedDependent(dependentType string) (runtime.Obje
 		return nil, err
 	}
 	return fetch, nil
-}
-
-func (b *BaseResource) GetWatchedResourcesTypes() []schema.GroupVersionKind {
-	watched := make([]schema.GroupVersionKind, 0, len(b.dependents))
-	for _, dep := range b.dependents {
-		if dep.GetConfig().Watched {
-			watched = append(watched, dep.GetConfig().GroupVersionKind)
-		}
-	}
-	return watched
 }
 
 // AddDependentResource adds dependent resources to this base resource, keeping the order in which they are added, it is
