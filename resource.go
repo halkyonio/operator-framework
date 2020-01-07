@@ -11,7 +11,6 @@ import (
 type Resource interface {
 	v1.Object
 	runtime.Object
-	InitDependents() []DependentResource
 	NeedsRequeue() bool
 	GetStatusAsString() string
 	ShouldDelete() bool
@@ -21,7 +20,7 @@ type Resource interface {
 	CheckValidity() error
 	Init() bool
 	GetAsHalkyonResource() v1beta1.HalkyonResource
-	FetchAndCreateNew(name, namespace string) (Resource, error)
+	FetchAndCreateNew(name, namespace string, callback WatchCallback) (Resource, error)
 	PrimaryResourceType() runtime.Object
 	Delete() error
 	CreateOrUpdate() error

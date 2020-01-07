@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
+	"halkyon.io/api/v1beta1"
 	"halkyon.io/operator-framework/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,7 +35,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	b.logger().WithValues("namespace", request.Namespace)
 
 	// Fetch the primary resource
-	resource, err := b.resource.FetchAndCreateNew(request.Name, request.Namespace)
+	resource, err := b.resource.FetchAndCreateNew(request.Name, request.Namespace, getCallbackFor(b.resource))
 	typeName := util.GetObjectName(b.resource.PrimaryResourceType())
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -127,29 +128,43 @@ func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 	// Register logger
 	registerLogger(controllerName)
 
-	// init dependents
-	dependents := resource.InitDependents()
-
 	// Watch for changes to primary resource
 	if err = c.Watch(&source.Kind{Type: resourceType}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
 
-	// Watch for changes of child/secondary resources
-	owner := &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    resourceType,
-	}
-	for _, dependent := range dependents {
-		config := dependent.GetConfig()
-		if config.Watched {
-			if err = c.Watch(createSourceForGVK(config.GroupVersionKind), owner); err != nil {
-				return err
-			}
-		}
-	}
+	// Create callback for dependent resources to add themselves as watched resources
+	callbacks[controllerName] = createCallbackFor(c)
 
 	return nil
+}
+
+type WatchCallback func(owner v1beta1.HalkyonResource, dependentGVK schema.GroupVersionKind) error
+
+var callbacks = make(map[string]WatchCallback, 7)
+
+// record which gvks we're already watching to not register another watch again
+var watched = make(map[schema.GroupVersionKind]bool, 21)
+
+func createCallbackFor(c controller.Controller) WatchCallback {
+	return func(resource v1beta1.HalkyonResource, dependentGVK schema.GroupVersionKind) error {
+		// Watch for changes of child/secondary resources
+		owner := &handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    CreateEmptyUnstructured(resource.GetGroupVersionKind()),
+		}
+		if !watched[dependentGVK] {
+			if err := c.Watch(createSourceForGVK(dependentGVK), owner); err != nil {
+				return err
+			}
+			watched[dependentGVK] = true
+		}
+		return nil
+	}
+}
+
+func getCallbackFor(resource Resource) WatchCallback {
+	return callbacks[controllerNameFor(resource.PrimaryResourceType())]
 }
 
 func controllerNameFor(resource runtime.Object) string {

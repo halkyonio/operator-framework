@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	"halkyon.io/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"strings"
 )
@@ -37,13 +38,29 @@ func (b *BaseResource) CreateOrUpdateDependents() error {
 	return nil
 }
 
-func (b *BaseResource) FetchAndInitNewResource(name string, namespace string, toInit Resource) (Resource, error) {
-	toInit.SetName(name)
-	toInit.SetNamespace(namespace)
-	resourceType := toInit.GetAsHalkyonResource()
-	_, err := Helper.Fetch(name, namespace, resourceType)
+type dependentInitializer func(toInit v1beta1.HalkyonResource) ([]DependentResource, error)
+
+func FetchAndInitNewResource(name string, namespace string, toInit Resource, callback WatchCallback, initializer dependentInitializer) (Resource, error) {
+	newResource := toInit.GetAsHalkyonResource()
+	newResource.SetName(name)
+	newResource.SetNamespace(namespace)
+	_, err := Helper.Fetch(name, namespace, newResource)
 	if err != nil {
 		return toInit, err
+	}
+	b := NewHasDependents(newResource.Prototype())
+	resources, err := initializer(newResource)
+	if err != nil {
+		return nil, err
+	}
+	b.AddDependentResource(resources...)
+	for _, dependent := range b.dependents {
+		config := dependent.GetConfig()
+		if config.Watched {
+			if err := callback(dependent.Owner(), config.GroupVersionKind); err != nil {
+				return toInit, err
+			}
+		}
 	}
 	return toInit, err
 }

@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/go-logr/logr v0.1.0
-	halkyon.io/api v1.0.0-beta.8.0.20191219201020-14dfa325eab8
+	halkyon.io/api v1.0.0-beta.8.0.20200107175629-6ff499303202
 	k8s.io/api v0.0.0-20190918195907-bd6ac527cfd2
 	k8s.io/apimachinery v0.17.0
 	k8s.io/client-go v11.0.1-0.20190805182715-88a2adca7e76+incompatible
