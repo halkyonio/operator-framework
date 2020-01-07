@@ -12,7 +12,7 @@ type BaseDependentResource struct {
 }
 
 func NewBaseDependentResource(owner v1beta1.HalkyonResource, dependentType schema.GroupVersionKind) *BaseDependentResource {
-	return NewConfiguredBaseDependentResource(owner, NewConfig(dependentType, owner.GetNamespace()))
+	return NewConfiguredBaseDependentResource(owner, NewConfig(dependentType))
 }
 
 func NewConfiguredBaseDependentResource(owner v1beta1.HalkyonResource, config DependentResourceConfig) *BaseDependentResource {
@@ -28,7 +28,7 @@ func DefaultFetcher(dep DependentResource) (runtime.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	return Helper.Fetch(dep.Name(), config.Namespace, into)
+	return Helper.Fetch(dep.Name(), dep.Owner().GetNamespace(), into)
 }
 
 func DefaultDependentResourceNameFor(owner v1beta1.HalkyonResource) string {
