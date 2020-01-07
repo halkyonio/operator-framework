@@ -18,8 +18,8 @@ func (res Role) NameFrom(underlying runtime.Object) string {
 	return DefaultNameFrom(res, underlying)
 }
 
-func (res Role) Fetch(helper *K8SHelper) (runtime.Object, error) {
-	return DefaultFetcher(res, helper)
+func (res Role) Fetch() (runtime.Object, error) {
+	return DefaultFetcher(res)
 }
 
 func (res Role) IsReady(underlying runtime.Object) (ready bool, message string) {

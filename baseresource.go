@@ -9,19 +9,11 @@ import (
 type BaseResource struct {
 	dependents          []DependentResource
 	requeue             bool
-	helper              *K8SHelper
 	primaryResourceType runtime.Object
 }
 
 func (b *BaseResource) PrimaryResourceType() runtime.Object {
 	return b.primaryResourceType
-}
-
-func (b *BaseResource) Helper() *K8SHelper {
-	if b.helper == nil {
-		b.helper = GetHelperFor(b.primaryResourceType)
-	}
-	return b.helper
 }
 
 func (b *BaseResource) SetNeedsRequeue(requeue bool) {
@@ -38,7 +30,7 @@ func NewHasDependents(primary runtime.Object) *BaseResource {
 
 func (b *BaseResource) CreateOrUpdateDependents() error {
 	for _, dep := range b.dependents {
-		if e := CreateOrUpdate(dep, b.Helper()); e != nil {
+		if e := CreateOrUpdate(dep); e != nil {
 			return fmt.Errorf("failed to create or update '%s' %s: %s", dep.Name(), dep.GetConfig().TypeName(), e.Error())
 		}
 	}
@@ -49,7 +41,7 @@ func (b *BaseResource) FetchAndInitNewResource(name string, namespace string, to
 	toInit.SetName(name)
 	toInit.SetNamespace(namespace)
 	resourceType := toInit.GetAsHalkyonResource()
-	_, err := b.Helper().Fetch(name, namespace, resourceType)
+	_, err := Helper.Fetch(name, namespace, resourceType)
 	if err != nil {
 		return toInit, err
 	}
@@ -67,7 +59,7 @@ func (b *BaseResource) FetchUpdatedDependent(dependentType string) (runtime.Obje
 	if dependent == nil {
 		return nil, fmt.Errorf("couldn't find any dependent resource of kind '%s'", dependentType)
 	}
-	fetch, err := dependent.Fetch(b.Helper())
+	fetch, err := dependent.Fetch()
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +87,7 @@ func (b *BaseResource) ComputeStatus(current Resource) (statuses []DependentReso
 	}
 	if len(msgs) > 0 {
 		msg := fmt.Sprintf("Waiting for the following resources: %s", strings.Join(msgs, " / "))
-		b.Helper().ReqLogger.Info(msg)
+		LoggerFor(current.GetAsHalkyonResource()).Info(msg)
 		// set the status but ignore the result since dependents are not ready, we do need to update and requeue in any case
 		_ = current.SetInitialStatus(msg)
 		b.SetNeedsRequeue(true)

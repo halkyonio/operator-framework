@@ -20,8 +20,8 @@ func (res RoleBinding) NameFrom(underlying runtime.Object) string {
 	return DefaultNameFrom(res, underlying)
 }
 
-func (res RoleBinding) Fetch(helper *K8SHelper) (runtime.Object, error) {
-	return DefaultFetcher(res, helper)
+func (res RoleBinding) Fetch() (runtime.Object, error) {
+	return DefaultFetcher(res)
 }
 
 func (res RoleBinding) IsReady(underlying runtime.Object) (ready bool, message string) {

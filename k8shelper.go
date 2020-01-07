@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
+	"halkyon.io/api/v1beta1"
 	"halkyon.io/operator-framework/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,14 +15,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-var helpers = make(map[string]*K8SHelper, 7)
+var loggers = make(map[string]logr.Logger, 7)
 
 type K8SHelper struct {
-	Client    client.Client
-	Config    *rest.Config
-	Scheme    *runtime.Scheme
-	ReqLogger logr.Logger
+	Client client.Client
+	Config *rest.Config
+	Scheme *runtime.Scheme
 }
+
+var Helper K8SHelper
 
 func (rh K8SHelper) Fetch(name, namespace string, into runtime.Object) (runtime.Object, error) {
 	if err := rh.Client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, into); err != nil {
@@ -33,19 +35,25 @@ func (rh K8SHelper) Fetch(name, namespace string, into runtime.Object) (runtime.
 	return into, nil
 }
 
-func registerHelper(nameForLogger string, resourceType runtime.Object, mgr manager.Manager) *K8SHelper {
-	config := mgr.GetConfig()
-	helper := &K8SHelper{
-		Client:    mgr.GetClient(),
-		Config:    config,
-		Scheme:    mgr.GetScheme(),
-		ReqLogger: log.Log.WithName(nameForLogger),
-	}
-	helpers[util.GetObjectName(resourceType)] = helper
-	CheckIfOpenShift(config)
-	return helper
+func LoggerFor(resourceType v1beta1.HalkyonResource) logr.Logger {
+	name := controllerNameFor(resourceType)
+	return loggers[name]
 }
 
-func GetHelperFor(resourceType runtime.Object) *K8SHelper {
-	return helpers[util.GetObjectName(resourceType)]
+func InitHelper(mgr manager.Manager) {
+	config := mgr.GetConfig()
+	Helper = K8SHelper{
+		Client: mgr.GetClient(),
+		Config: config,
+		Scheme: mgr.GetScheme(),
+	}
+	checkIfOpenShift(config)
+}
+
+func registerLogger(nameForLogger string) {
+	logger, ok := loggers[nameForLogger]
+	if !ok {
+		logger = log.Log.WithName(nameForLogger)
+		loggers[nameForLogger] = logger
+	}
 }

@@ -25,7 +25,6 @@ type Resource interface {
 	PrimaryResourceType() runtime.Object
 	Delete() error
 	CreateOrUpdate() error
-	Helper() *K8SHelper
 }
 
 func HasChangedFromStatusUpdate(status interface{}, statuses []DependentResourceStatus, msg string) (changed bool, updatedMsg string) {

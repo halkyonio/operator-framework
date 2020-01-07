@@ -24,18 +24,10 @@ func NewGenericReconciler(resource Resource) *GenericReconciler {
 
 type GenericReconciler struct {
 	resource Resource
-	helper   *K8SHelper
-}
-
-func (b *GenericReconciler) Helper() *K8SHelper {
-	if b.helper == nil {
-		b.helper = GetHelperFor(b.resource.PrimaryResourceType())
-	}
-	return b.helper
 }
 
 func (b *GenericReconciler) logger() logr.Logger {
-	return b.Helper().ReqLogger
+	return LoggerFor(b.resource.GetAsHalkyonResource())
 }
 
 func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
@@ -65,7 +57,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	if resource.Init() {
-		if e := b.Helper().Client.Update(context.Background(), resource.GetAsHalkyonResource()); e != nil {
+		if e := Helper.Client.Update(context.Background(), resource.GetAsHalkyonResource()); e != nil {
 			b.logger().Error(e, fmt.Sprintf("failed to update '%s' %s", resource.GetName(), typeName))
 		}
 		return reconcile.Result{}, nil
@@ -108,7 +100,7 @@ func (b *GenericReconciler) updateStatusIfNeeded(instance Resource, err error) {
 	}
 	if updateStatus {
 		object := instance.GetAsHalkyonResource()
-		if e := b.Helper().Client.Status().Update(context.Background(), object); e != nil {
+		if e := Helper.Client.Status().Update(context.Background(), object); e != nil {
 			b.logger().Error(e, fmt.Sprintf("failed to update status for '%s' %s", instance.GetName(), util.GetObjectName(object)))
 		}
 	}
@@ -132,10 +124,10 @@ func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 		return err
 	}
 
-	// Register helper
-	registerHelper(controllerName, resourceType, mgr)
+	// Register logger
+	registerLogger(controllerName)
 
-	// init dependents, they might need helper
+	// init dependents
 	dependents := resource.InitDependents()
 
 	// Watch for changes to primary resource

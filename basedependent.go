@@ -22,13 +22,13 @@ func NewConfiguredBaseDependentResource(owner v1beta1.HalkyonResource, config De
 	}
 }
 
-func DefaultFetcher(dep DependentResource, helper *K8SHelper) (runtime.Object, error) {
+func DefaultFetcher(dep DependentResource) (runtime.Object, error) {
 	config := dep.GetConfig()
-	into, err := helper.Scheme.New(config.GroupVersionKind)
+	into, err := Helper.Scheme.New(config.GroupVersionKind)
 	if err != nil {
 		return nil, err
 	}
-	return helper.Fetch(dep.Name(), config.Namespace, into)
+	return Helper.Fetch(dep.Name(), config.Namespace, into)
 }
 
 func DefaultDependentResourceNameFor(owner v1beta1.HalkyonResource) string {
