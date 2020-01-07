@@ -41,7 +41,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 		if errors.IsNotFound(err) {
 			// Return and don't create
 			if resource.ShouldDelete() {
-				b.logger().Info(typeName + " resource is marked for deletion. Running clean-up.")
+				b.logger().Info("'" + request.Name + "' " + typeName + " is marked for deletion. Running clean-up.")
 				err := resource.Delete()
 				return reconcile.Result{Requeue: resource.NeedsRequeue()}, err
 			}
