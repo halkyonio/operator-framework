@@ -44,11 +44,12 @@ func NewReadyDependentResourceStatus(dependentName string, fieldName string) Dep
 
 func CreateOrUpdate(r DependentResource, helper *K8SHelper) error {
 	// if the resource specifies that it shouldn't be created, exit fast
-	if !r.GetConfig().CreatedOrUpdated {
+	config := r.GetConfig()
+	if !config.CreatedOrUpdated {
 		return nil
 	}
 
-	kind := r.GetConfig().TypeName()
+	kind := config.TypeName()
 	object, err := r.Fetch(helper)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -59,7 +60,7 @@ func CreateOrUpdate(r DependentResource, helper *K8SHelper) error {
 			}
 
 			// set controller reference if the resource should be owned
-			if r.GetConfig().Owned {
+			if config.Owned {
 				// in most instances, resourceDefinedOwner == owner but some resources might want to return a different one
 				resourceDefinedOwner := r.Owner()
 				if e := controllerutil.SetControllerReference(resourceDefinedOwner, obj.(v1.Object), helper.Scheme); e != nil {
