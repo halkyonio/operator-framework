@@ -20,10 +20,11 @@ type Resource interface {
 	CheckValidity() error
 	Init() bool
 	GetAsHalkyonResource() v1beta1.HalkyonResource
-	FetchAndCreateNew(name, namespace string, callback WatchCallback) (Resource, error)
 	PrimaryResourceType() runtime.Object
 	Delete() error
 	CreateOrUpdate() error
+	NewEmpty() Resource
+	InitDependentResources() ([]DependentResource, error)
 }
 
 func HasChangedFromStatusUpdate(status interface{}, statuses []DependentResourceStatus, msg string) (changed bool, updatedMsg string) {

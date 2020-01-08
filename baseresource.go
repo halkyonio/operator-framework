@@ -2,7 +2,6 @@ package framework
 
 import (
 	"fmt"
-	"halkyon.io/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"strings"
 )
@@ -38,23 +37,18 @@ func (b *BaseResource) CreateOrUpdateDependents() error {
 	return nil
 }
 
-type dependentInitializer func(toInit v1beta1.HalkyonResource) ([]DependentResource, error)
-
-func FetchAndInitNewResource(name string, namespace string, toInit Resource, callback WatchCallback, initializer dependentInitializer) (Resource, error) {
-	newResource := toInit.GetAsHalkyonResource()
-	newResource.SetName(name)
-	newResource.SetNamespace(namespace)
-	_, err := Helper.Fetch(name, namespace, newResource)
+func FetchAndInitNewResource(name string, namespace string, toInit Resource, callback WatchCallback) (Resource, error) {
+	toInit.SetName(name)
+	toInit.SetNamespace(namespace)
+	_, err := Helper.Fetch(name, namespace, toInit.GetAsHalkyonResource())
 	if err != nil {
 		return toInit, err
 	}
-	b := NewHasDependents(newResource.Prototype())
-	resources, err := initializer(newResource)
+	dependents, err := toInit.InitDependentResources()
 	if err != nil {
 		return nil, err
 	}
-	b.AddDependentResource(resources...)
-	for _, dependent := range b.dependents {
+	for _, dependent := range dependents {
 		config := dependent.GetConfig()
 		if config.Watched {
 			if err := callback(dependent.Owner(), config.GroupVersionKind); err != nil {
@@ -85,13 +79,14 @@ func (b *BaseResource) FetchUpdatedDependent(dependentType string) (runtime.Obje
 
 // AddDependentResource adds dependent resources to this base resource, keeping the order in which they are added, it is
 // therefore possible to create dependent resources in a specific order since they are created in the same order as specified here
-func (b *BaseResource) AddDependentResource(resources ...DependentResource) {
+func (b *BaseResource) AddDependentResource(resources ...DependentResource) []DependentResource {
 	for _, dependent := range resources {
 		if dependent.Owner() == nil {
 			panic(fmt.Errorf("dependent resource %s must have an owner", dependent.Name()))
 		}
 		b.dependents = append(b.dependents, dependent)
 	}
+	return b.dependents
 }
 
 func (b *BaseResource) ComputeStatus(current Resource) (statuses []DependentResourceStatus, notReadyWantsUpdate bool) {
