@@ -148,12 +148,13 @@ var watched = make(map[schema.GroupVersionKind]bool, 21)
 
 func createCallbackFor(c controller.Controller) WatchCallback {
 	return func(resource v1beta1.HalkyonResource, dependentGVK schema.GroupVersionKind) error {
-		// Watch for changes of child/secondary resources
-		owner := &handler.EnqueueRequestForOwner{
-			IsController: true,
-			OwnerType:    CreateEmptyUnstructured(resource.GetGroupVersionKind()),
-		}
+		// if we're not already watching this secondary resource
 		if !watched[dependentGVK] {
+			// watch it
+			owner := &handler.EnqueueRequestForOwner{
+				IsController: true,
+				OwnerType:    CreateEmptyUnstructured(resource.GetGroupVersionKind()),
+			}
 			if err := c.Watch(createSourceForGVK(dependentGVK), owner); err != nil {
 				return err
 			}
