@@ -46,7 +46,7 @@ func FetchAndInitNewResource(name string, namespace string, toInit Resource, cal
 	}
 	dependents, err := toInit.InitDependentResources()
 	if err != nil {
-		return nil, err
+		return toInit, err
 	}
 	for _, dependent := range dependents {
 		config := dependent.GetConfig()

@@ -48,7 +48,11 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - create the request.
-		b.logger().Error(err, "failed to get "+typeName)
+		b.logger().Error(err, "failed to initialize '"+request.Name+"' "+typeName)
+		if resource != nil {
+			b.updateStatusIfNeeded(resource, err)
+			return reconcile.Result{Requeue: false}, nil
+		}
 		return reconcile.Result{}, err
 	}
 
