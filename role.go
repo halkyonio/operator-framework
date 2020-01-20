@@ -11,7 +11,7 @@ var RoleGVK = authorizv1.SchemeGroupVersion.WithKind("Role")
 
 type NeedsRole interface {
 	GetRoleName() string
-	GetOwner() v1beta1.HalkyonResource
+	Owner() v1beta1.HalkyonResource
 }
 
 type Role struct {
@@ -38,7 +38,7 @@ func (res Role) Update(toUpdate runtime.Object) (bool, error) {
 }
 
 func NewOwnedRole(owner NeedsRole) Role {
-	role := Role{BaseDependentResource: NewBaseDependentResource(owner.GetOwner(), RoleGVK), Delegate: owner}
+	role := Role{BaseDependentResource: NewBaseDependentResource(owner.Owner(), RoleGVK), Delegate: owner}
 	role.config.Watched = false
 	return role
 }

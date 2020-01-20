@@ -13,7 +13,7 @@ type NeedsRoleBinding interface {
 	GetRoleBindingName() string
 	GetAssociatedRoleName() string
 	GetServiceAccountName() string
-	GetOwner() v1beta1.HalkyonResource
+	Owner() v1beta1.HalkyonResource
 }
 
 type RoleBinding struct {
@@ -64,7 +64,7 @@ func (res RoleBinding) Update(toUpdate runtime.Object) (bool, error) {
 
 func NewOwnedRoleBinding(owner NeedsRoleBinding) RoleBinding {
 	binding := RoleBinding{
-		BaseDependentResource: NewBaseDependentResource(owner.GetOwner(), RoleBindingGVK),
+		BaseDependentResource: NewBaseDependentResource(owner.Owner(), RoleBindingGVK),
 		Delegate:              owner,
 	}
 	binding.config.Watched = false
