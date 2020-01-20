@@ -50,7 +50,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 		// Error reading the object - create the request.
 		b.logger().Error(err, "failed to initialize '"+request.Name+"' "+typeName)
 		if resource != nil {
-			b.updateStatusIfNeeded(resource, err)
+			UpdateStatusIfNeeded(resource, err)
 			return reconcile.Result{Requeue: false}, nil
 		}
 		return reconcile.Result{}, err
@@ -69,7 +69,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	if err := resource.CheckValidity(); err != nil {
-		b.updateStatusIfNeeded(resource, err)
+		UpdateStatusIfNeeded(resource, err)
 		return reconcile.Result{}, nil
 	}
 
@@ -78,7 +78,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	err = resource.CreateOrUpdate()
 
 	// always check status for updates
-	b.updateStatusIfNeeded(resource, err)
+	UpdateStatusIfNeeded(resource, err)
 
 	requeue := resource.NeedsRequeue()
 
@@ -94,19 +94,20 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	return reconcile.Result{Requeue: requeue}, nil
 }
 
-func (b *GenericReconciler) updateStatusIfNeeded(instance Resource, err error) {
+func UpdateStatusIfNeeded(instance Resource, err error) {
 	// update the resource if the status has changed
+	object := instance.GetAsHalkyonResource()
+	logger := LoggerFor(object)
 	updateStatus := false
 	if err == nil {
 		updateStatus = instance.ComputeStatus()
 	} else {
 		updateStatus = instance.SetErrorStatus(err)
-		b.logger().Error(err, fmt.Sprintf("'%s' %s has an error", instance.GetName(), util.GetObjectName(instance.GetAsHalkyonResource())))
+		logger.Error(err, fmt.Sprintf("'%s' %s has an error", instance.GetName(), util.GetObjectName(instance.GetAsHalkyonResource())))
 	}
 	if updateStatus {
-		object := instance.GetAsHalkyonResource()
 		if e := Helper.Client.Status().Update(context.Background(), object); e != nil {
-			b.logger().Error(e, fmt.Sprintf("failed to update status for '%s' %s", instance.GetName(), util.GetObjectName(object)))
+			logger.Error(e, fmt.Sprintf("failed to update status for '%s' %s", instance.GetName(), util.GetObjectName(object)))
 		}
 	}
 }
