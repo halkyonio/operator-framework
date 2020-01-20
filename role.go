@@ -9,9 +9,14 @@ import (
 
 var RoleGVK = authorizv1.SchemeGroupVersion.WithKind("Role")
 
+type NeedsRole interface {
+	GetRoleName() string
+	GetOwner() v1beta1.HalkyonResource
+}
+
 type Role struct {
 	*BaseDependentResource
-	namer func() string
+	Delegate NeedsRole
 }
 
 func (res Role) NameFrom(underlying runtime.Object) string {
@@ -32,14 +37,14 @@ func (res Role) Update(toUpdate runtime.Object) (bool, error) {
 	return false, nil
 }
 
-func NewOwnedRole(owner v1beta1.HalkyonResource, namerFn func() string) Role {
-	role := Role{BaseDependentResource: NewBaseDependentResource(owner, RoleGVK), namer: namerFn}
+func NewOwnedRole(owner NeedsRole) Role {
+	role := Role{BaseDependentResource: NewBaseDependentResource(owner.GetOwner(), RoleGVK), Delegate: owner}
 	role.config.Watched = false
 	return role
 }
 
 func (res Role) Name() string {
-	return res.namer()
+	return res.Delegate.GetRoleName()
 }
 
 func (res Role) Build(empty bool) (runtime.Object, error) {

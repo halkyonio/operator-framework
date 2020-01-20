@@ -9,11 +9,16 @@ import (
 
 var RoleBindingGVK = authorizv1.SchemeGroupVersion.WithKind("RoleBinding")
 
+type NeedsRoleBinding interface {
+	GetRoleBindingName() string
+	GetAssociatedRoleName() string
+	GetServiceAccountName() string
+	GetOwner() v1beta1.HalkyonResource
+}
+
 type RoleBinding struct {
 	*BaseDependentResource
-	namer               func() string
-	associatedRoleNamer func() string
-	serviceAccountNamer func() string
+	Delegate NeedsRoleBinding
 }
 
 func (res RoleBinding) NameFrom(underlying runtime.Object) string {
@@ -37,7 +42,7 @@ func (res RoleBinding) Update(toUpdate runtime.Object) (bool, error) {
 
 	// check if the binding contains the current owner as subject
 	namespace := owner.GetNamespace()
-	name := res.serviceAccountNamer()
+	name := res.Delegate.GetServiceAccountName()
 	found := false
 	for _, subject := range rb.Subjects {
 		if subject.Name == name && subject.Namespace == namespace {
@@ -57,23 +62,17 @@ func (res RoleBinding) Update(toUpdate runtime.Object) (bool, error) {
 	return !found, nil
 }
 
-func (res RoleBinding) NewInstanceWith(owner v1beta1.HalkyonResource) DependentResource {
-	return NewOwnedRoleBinding(owner, res.namer, res.associatedRoleNamer, res.serviceAccountNamer)
-}
-
-func NewOwnedRoleBinding(owner v1beta1.HalkyonResource, namer, associatedRoleNamer, serviceAccountNamer func() string) RoleBinding {
+func NewOwnedRoleBinding(owner NeedsRoleBinding) RoleBinding {
 	binding := RoleBinding{
-		BaseDependentResource: NewBaseDependentResource(owner, RoleBindingGVK),
-		namer:                 namer,
-		associatedRoleNamer:   associatedRoleNamer,
-		serviceAccountNamer:   serviceAccountNamer,
+		BaseDependentResource: NewBaseDependentResource(owner.GetOwner(), RoleBindingGVK),
+		Delegate:              owner,
 	}
 	binding.config.Watched = false
 	return binding
 }
 
 func (res RoleBinding) Name() string {
-	return res.namer()
+	return res.Delegate.GetRoleBindingName()
 }
 
 func (res RoleBinding) Build(empty bool) (runtime.Object, error) {
@@ -87,10 +86,10 @@ func (res RoleBinding) Build(empty bool) (runtime.Object, error) {
 		}
 		ser.RoleRef = authorizv1.RoleRef{
 			Kind: "Role",
-			Name: res.associatedRoleNamer(),
+			Name: res.Delegate.GetAssociatedRoleName(),
 		}
 		ser.Subjects = []authorizv1.Subject{
-			{Kind: "ServiceAccount", Name: res.serviceAccountNamer(), Namespace: namespace},
+			{Kind: "ServiceAccount", Name: res.Delegate.GetServiceAccountName(), Namespace: namespace},
 		}
 	}
 	return ser, nil
