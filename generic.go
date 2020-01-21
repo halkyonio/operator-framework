@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	"strings"
+	"sync"
 )
 
 func NewGenericReconciler(resource Resource) *GenericReconciler {
@@ -146,15 +147,20 @@ func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 
 type WatchCallback func(owner v1beta1.HalkyonResource, dependentGVK schema.GroupVersionKind) error
 
-var callbacks = make(map[string]WatchCallback, 7)
-
-// record which gvks we're already watching to not register another watch again
-var watched = make(map[schema.GroupVersionKind]bool, 21)
+var (
+	callbacks = make(map[string]WatchCallback, 7)
+	// record which gvks we're already watching to not register another watch again
+	watched = make(map[schema.GroupVersionKind]bool, 21)
+	mutex   = &sync.Mutex{}
+)
 
 func createCallbackFor(c controller.Controller) WatchCallback {
 	return func(resource v1beta1.HalkyonResource, dependentGVK schema.GroupVersionKind) error {
 		// if we're not already watching this secondary resource
-		if !watched[dependentGVK] {
+		mutex.Lock()
+		notAlreadyWatched := !watched[dependentGVK]
+		mutex.Unlock()
+		if notAlreadyWatched {
 			// watch it
 			owner := &handler.EnqueueRequestForOwner{
 				IsController: true,
@@ -163,7 +169,9 @@ func createCallbackFor(c controller.Controller) WatchCallback {
 			if err := c.Watch(createSourceForGVK(dependentGVK), owner); err != nil {
 				return err
 			}
+			mutex.Lock()
 			watched[dependentGVK] = true
+			mutex.Unlock()
 		}
 		return nil
 	}
