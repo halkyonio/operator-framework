@@ -73,9 +73,6 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 		UpdateStatusIfNeeded(resource, err)
 		return reconcile.Result{}, nil
 	}
-
-	b.logger().Info("-> "+typeName, "name", resource.GetName(), "status", initialStatus)
-
 	err = resource.CreateOrUpdate()
 
 	// always check status for updates
@@ -86,6 +83,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	// only log exit if status changed to avoid being too verbose
 	newStatus := resource.GetStatusAsString()
 	if newStatus != initialStatus {
+		b.logger().Info("-> "+typeName, "name", resource.GetName(), "status", initialStatus)
 		msg := "<- " + typeName
 		if requeue {
 			msg += " (requeued)"
