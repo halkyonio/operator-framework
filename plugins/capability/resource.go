@@ -43,6 +43,30 @@ type NeedsLogging interface {
 	SetLogger(logger hclog.Logger)
 }
 
+type QueryingSimplePluginResourceStem struct {
+	SimplePluginResourceStem
+	resolver func(logger hclog.Logger) TypeInfo
+	Logger   hclog.Logger
+}
+
+func NewQueryingSimplePluginResourceStem(cat halkyon.CapabilityCategory, typeInfoResolver func(logger hclog.Logger) TypeInfo) QueryingSimplePluginResourceStem {
+	return QueryingSimplePluginResourceStem{
+		SimplePluginResourceStem: SimplePluginResourceStem{cc: cat},
+		resolver:                 typeInfoResolver,
+	}
+}
+
+func (p *QueryingSimplePluginResourceStem) GetSupportedTypes() []TypeInfo {
+	if len(p.ct) == 0 {
+		p.ct = []TypeInfo{p.resolver(p.Logger)}
+	}
+	return p.ct
+}
+
+func (p *QueryingSimplePluginResourceStem) SetLogger(logger hclog.Logger) {
+	p.Logger = logger
+}
+
 type AggregatePluginResource struct {
 	category        halkyon.CapabilityCategory
 	pluginResources map[halkyon.CapabilityType]PluginResource
