@@ -3,6 +3,7 @@ package capability
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	halkyon "halkyon.io/api/capability/v1beta1"
 	framework "halkyon.io/operator-framework"
@@ -39,13 +40,19 @@ var _ PluginServer = &PluginServerImpl{}
 
 func StartPluginServerFor(resources ...PluginResource) {
 	pluginName := filepath.Base(os.Args[0])
-	p, err := NewAggregatePluginResource(resources...)
+	logger := hclog.New(&hclog.LoggerOptions{
+		Output: hclog.DefaultOutput,
+		Level:  hclog.Trace,
+		Name:   pluginName,
+	})
+	p, err := NewAggregatePluginResource(logger, resources...)
 	if err != nil {
 		panic(err)
 	}
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: Handshake,
 		Plugins:         map[string]plugin.Plugin{pluginName: &GoPluginPlugin{Delegate: p}},
+		Logger:          logger,
 	})
 }
 

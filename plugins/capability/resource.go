@@ -2,9 +2,11 @@ package capability
 
 import (
 	"fmt"
+	"github.com/hashicorp/go-hclog"
 	halkyon "halkyon.io/api/capability/v1beta1"
 	"halkyon.io/api/v1beta1"
 	framework "halkyon.io/operator-framework"
+	"reflect"
 )
 
 // PluginResource gathers behavior that plugin implementors are expected to provide to the plugins architecture
@@ -37,16 +39,24 @@ func (p SimplePluginResourceStem) GetSupportedTypes() []TypeInfo {
 	return p.ct
 }
 
+type NeedsLogging interface {
+	SetLogger(logger hclog.Logger)
+}
+
 type AggregatePluginResource struct {
 	category        halkyon.CapabilityCategory
 	pluginResources map[halkyon.CapabilityType]PluginResource
 }
 
-func NewAggregatePluginResource(resources ...PluginResource) (PluginResource, error) {
+func NewAggregatePluginResource(logger hclog.Logger, resources ...PluginResource) (PluginResource, error) {
 	apr := AggregatePluginResource{
 		pluginResources: make(map[halkyon.CapabilityType]PluginResource, len(resources)),
 	}
 	for _, resource := range resources {
+		if needsLogging, ok := resource.(NeedsLogging); ok {
+			name := reflect.TypeOf(needsLogging).Elem().Name()
+			needsLogging.SetLogger(logger.Named(name))
+		}
 		category := categoryKey(resource.GetSupportedCategory())
 		if len(apr.category) == 0 {
 			apr.category = category

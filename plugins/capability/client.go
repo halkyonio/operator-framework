@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	halkyon "halkyon.io/api/capability/v1beta1"
 	framework "halkyon.io/operator-framework"
@@ -115,6 +116,11 @@ func NewPlugin(path string, log logr.Logger) (Plugin, error) {
 		HandshakeConfig: Handshake,
 		Plugins:         map[string]plugin.Plugin{name: &GoPluginPlugin{name: name}},
 		Cmd:             exec.Command(path),
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Output: hclog.DefaultOutput,
+			Level:  hclog.Trace,
+			Name:   name,
+		}),
 	})
 
 	// Connect via RPC
