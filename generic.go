@@ -90,7 +90,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 		}
 		b.logger().Info(msg, "name", resource.GetName(), "status", newStatus)
 	}
-	return reconcile.Result{Requeue: false}, nil
+	return reconcile.Result{Requeue: requeue}, nil
 }
 
 func UpdateStatusIfNeeded(instance Resource, err error) {
