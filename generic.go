@@ -90,12 +90,13 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 		}
 		b.logger().Info(msg, "name", resource.GetName(), "status", newStatus)
 	}
-	return reconcile.Result{Requeue: requeue}, nil
+	return reconcile.Result{Requeue: false}, nil
 }
 
 func UpdateStatusIfNeeded(instance Resource, err error) {
 	// update the resource if the status has changed
 	object := instance.GetAsHalkyonResource()
+	initialStatus := instance.GetStatusAsString()
 	logger := LoggerFor(object)
 	updateStatus := false
 	if err == nil {
@@ -104,8 +105,9 @@ func UpdateStatusIfNeeded(instance Resource, err error) {
 		updateStatus = instance.SetErrorStatus(err)
 		logger.Error(err, fmt.Sprintf("'%s' %s has an error", instance.GetName(), util.GetObjectName(instance.GetAsHalkyonResource())))
 	}
-	if updateStatus {
-		if e := Helper.Client.Status().Update(context.Background(), object); e != nil {
+	newStatus := instance.GetStatusAsString()
+	if updateStatus || initialStatus != newStatus {
+		if e := Helper.Client.Status().Update(context.TODO(), object); e != nil {
 			logger.Error(e, fmt.Sprintf("failed to update status for '%s' %s", instance.GetName(), util.GetObjectName(object)))
 		}
 	}
