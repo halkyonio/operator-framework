@@ -51,7 +51,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 		// Error reading the object - create the request.
 		b.logger().Error(err, "failed to initialize '"+request.Name+"' "+typeName)
 		if resource != nil {
-			UpdateStatusIfNeeded(resource, err)
+			err = UpdateStatusIfNeeded(resource, err)
 			return reconcile.Result{Requeue: false}, nil
 		}
 		return reconcile.Result{}, err
@@ -71,13 +71,15 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	if err := resource.CheckValidity(); err != nil {
-		UpdateStatusIfNeeded(resource, err)
-		return reconcile.Result{}, nil
+		err = UpdateStatusIfNeeded(resource, err)
+		return reconcile.Result{}, err
 	}
 	err = resource.CreateOrUpdate()
 
 	// always check status for updates
-	UpdateStatusIfNeeded(resource, err)
+	if err = UpdateStatusIfNeeded(resource, err); err != nil {
+		return reconcile.Result{}, err
+	}
 
 	requeue := resource.NeedsRequeue()
 
@@ -93,7 +95,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	return reconcile.Result{Requeue: requeue}, nil
 }
 
-func UpdateStatusIfNeeded(instance Resource, err error) {
+func UpdateStatusIfNeeded(instance Resource, err error) error {
 	// update the resource if the status has changed
 	object := instance.GetAsHalkyonResource()
 	initialStatus := instance.GetStatusAsString()
@@ -107,10 +109,12 @@ func UpdateStatusIfNeeded(instance Resource, err error) {
 	}
 	newStatus := instance.GetStatusAsString()
 	if updateStatus || initialStatus != newStatus {
-		if e := Helper.Client.Status().Update(context.TODO(), object); e != nil {
+		if e := Helper.Client.Status().Update(context.Background(), object); e != nil {
 			logger.Error(e, fmt.Sprintf("failed to update status for '%s' %s", instance.GetName(), util.GetObjectName(object)))
+			return e
 		}
 	}
+	return nil
 }
 
 func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
