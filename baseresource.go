@@ -3,6 +3,7 @@ package framework
 import (
 	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strings"
 )
 
@@ -59,22 +60,56 @@ func FetchAndInitNewResource(name string, namespace string, toInit Resource, cal
 	return toInit, err
 }
 
-func (b *BaseResource) FetchUpdatedDependent(dependentType string) (runtime.Object, error) {
+type Predicate interface {
+	Matches(resource DependentResource) bool
+}
+
+type TypePredicate struct {
+	gvk  schema.GroupVersionKind
+	desc string
+}
+
+func (tp TypePredicate) Matches(resource DependentResource) bool {
+	return resource.GetConfig().GroupVersionKind == tp.gvk
+}
+
+func (tp TypePredicate) String() string {
+	return tp.desc
+}
+
+func TypePredicateFor(gvk schema.GroupVersionKind) Predicate {
+	return TypePredicate{
+		gvk:  gvk,
+		desc: fmt.Sprintf("GetConfig().GroupVersionKind == %v", gvk),
+	}
+}
+
+func (b *BaseResource) FetchUpdatedDependent(predicate Predicate) (runtime.Object, error) {
 	var dependent DependentResource
+	matching := 0
 	for _, d := range b.dependents {
-		if d.GetConfig().TypeName() == dependentType {
+		if predicate.Matches(d) {
 			dependent = d
-			break
+			matching++
 		}
 	}
-	if dependent == nil {
-		return nil, fmt.Errorf("couldn't find any dependent resource of kind '%s'", dependentType)
+	predicateDesc := "predicate"
+	if stringer, ok := predicate.(fmt.Stringer); ok {
+		predicateDesc = stringer.String()
 	}
-	fetch, err := dependent.Fetch()
-	if err != nil {
-		return nil, err
+
+	switch matching {
+	case 0:
+		return nil, fmt.Errorf("couldn't find any dependent resource matching %s", predicateDesc)
+	case 1:
+		fetch, err := dependent.Fetch()
+		if err != nil {
+			return nil, err
+		}
+		return fetch, nil
+	default:
+		return nil, fmt.Errorf("found %d dependent resources matching %s", matching, predicateDesc)
 	}
-	return fetch, nil
 }
 
 // AddDependentResource adds dependent resources to this base resource, keeping the order in which they are added, it is
