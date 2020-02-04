@@ -58,6 +58,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	initialStatus := resource.GetStatusAsString()
+	b.logger().Info("-> "+typeName, "name", resource.GetName(), "status", initialStatus)
 	if resource.GetGeneration() == 1 && len(initialStatus) == 0 {
 		resource.SetInitialStatus("Initializing")
 	}
@@ -83,7 +84,6 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	// only log exit if status changed to avoid being too verbose
 	newStatus := resource.GetStatusAsString()
 	if newStatus != initialStatus {
-		b.logger().Info("-> "+typeName, "name", resource.GetName(), "status", initialStatus)
 		msg := "<- " + typeName
 		if requeue {
 			msg += " (requeued)"
