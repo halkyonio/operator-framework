@@ -115,7 +115,7 @@ func (b *BaseResource) areDependentResourcesReady() (statuses []DependentResourc
 		config := dependent.GetConfig()
 		if config.CheckedForReadiness {
 			name := config.TypeName()
-			fetched, err := b.FetchUpdatedDependent(name)
+			fetched, err := dependent.Fetch()
 			if err != nil {
 				statuses = append(statuses, NewFailedDependentResourceStatus(name, err))
 			} else {
