@@ -2,9 +2,9 @@ package framework
 
 import (
 	"fmt"
+	"halkyon.io/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"strings"
 )
 
 type BaseResource struct {
@@ -49,14 +49,24 @@ func FetchAndInitNewResource(name string, namespace string, toInit Resource, cal
 	if err != nil {
 		return toInit, err
 	}
+
+	// init status if needed
+	status := toInit.GetStatus()
+	if len(status.Conditions) == 0 {
+		status.Conditions = make([]v1beta1.DependentCondition, 0, len(dependents))
+	}
 	for _, dependent := range dependents {
+		// add watch if needed
 		config := dependent.GetConfig()
 		if config.Watched {
 			if err := callback(dependent.Owner(), config.GroupVersionKind); err != nil {
 				return toInit, err
 			}
 		}
+		// init associated status condition if needed
+		_ = status.GetConditionFor(dependent.Name(), config.GroupVersionKind)
 	}
+	toInit.SetStatus(status)
 	return toInit, err
 }
 
@@ -128,44 +138,33 @@ func (b *BaseResource) AddDependentResource(resources ...DependentResource) []De
 	return b.dependents
 }
 
-func (b *BaseResource) ComputeStatus(current Resource) (statuses []DependentResourceStatus, notReadyWantsUpdate bool) {
-	statuses = b.areDependentResourcesReady()
-	msgs := make([]string, 0, len(statuses))
-	for _, status := range statuses {
-		if !status.Ready {
-			msgs = append(msgs, fmt.Sprintf("%s => %s", status.DependentName, status.Message))
-		}
-	}
-	if len(msgs) > 0 {
-		msg := fmt.Sprintf("Waiting for the following resources: %s", strings.Join(msgs, " / "))
-		LoggerFor(current.GetAsHalkyonResource()).Info(msg)
-		// set the status but ignore the result since dependents are not ready, we do need to update and requeue in any case
-		_ = current.SetInitialStatus(msg)
-		b.SetNeedsRequeue(true)
-		return statuses, true
-	}
-
-	return statuses, false
-}
-
-func (b *BaseResource) areDependentResourcesReady() (statuses []DependentResourceStatus) {
-	statuses = make([]DependentResourceStatus, 0, len(b.dependents))
+func (b *BaseResource) ComputeStatus(current Resource) (needsUpdate bool) {
+	// todo: compute whether we need to update the resource
+	status := current.GetStatus()
 	for _, dependent := range b.dependents {
 		config := dependent.GetConfig()
 		if config.CheckedForReadiness {
-			name := config.TypeName()
 			fetched, err := dependent.Fetch()
+			condition := status.GetConditionFor(dependent.Name(), config.GroupVersionKind)
 			if err != nil {
-				statuses = append(statuses, NewFailedDependentResourceStatus(name, err))
+				condition.Type = v1beta1.DependentFailed
+				condition.Reason = "Failed" // todo: clean-up Reason vs Type
+				condition.Message = err.Error()
 			} else {
 				ready, message := dependent.IsReady(fetched)
 				if !ready {
-					statuses = append(statuses, NewFailedDependentResourceStatus(name, message))
+					condition.Type = v1beta1.DependentPending
+					condition.Reason = "Pending" // todo: clean-up Reason vs Type
+					condition.Message = message
 				} else {
-					statuses = append(statuses, NewReadyDependentResourceStatus(dependent.NameFrom(fetched), config.OwnerStatusField))
+					condition.Type = v1beta1.DependentReady
+					condition.Reason = "Ready" // todo: clean-up Reason vs Type
+					condition.Message = message
 				}
 			}
+			needsUpdate = true
 		}
 	}
-	return statuses
+	current.SetStatus(status)
+	return
 }

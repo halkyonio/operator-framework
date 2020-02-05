@@ -11,6 +11,7 @@ import (
 type Resource interface {
 	v1.Object
 	runtime.Object
+	v1beta1.StatusAware
 	NeedsRequeue() bool
 	GetStatusAsString() string
 	ShouldDelete() bool
