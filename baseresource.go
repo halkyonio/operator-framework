@@ -84,7 +84,7 @@ func TypePredicateFor(gvk schema.GroupVersionKind) Predicate {
 	}
 }
 
-func (b *BaseResource) FetchUpdatedDependent(predicate Predicate) (runtime.Object, error) {
+func (b *BaseResource) GetDependent(predicate Predicate) (DependentResource, error) {
 	var dependent DependentResource
 	matching := 0
 	for _, d := range b.dependents {
@@ -102,14 +102,18 @@ func (b *BaseResource) FetchUpdatedDependent(predicate Predicate) (runtime.Objec
 	case 0:
 		return nil, fmt.Errorf("couldn't find any dependent resource matching %s", predicateDesc)
 	case 1:
-		fetch, err := dependent.Fetch()
-		if err != nil {
-			return nil, err
-		}
-		return fetch, nil
+		return dependent, nil
 	default:
 		return nil, fmt.Errorf("found %d dependent resources matching %s", matching, predicateDesc)
 	}
+}
+
+func (b *BaseResource) FetchUpdatedDependent(predicate Predicate) (runtime.Object, error) {
+	dependent, err := b.GetDependent(predicate)
+	if err != nil {
+		return nil, err
+	}
+	return dependent.Fetch()
 }
 
 // AddDependentResource adds dependent resources to this base resource, keeping the order in which they are added, it is
