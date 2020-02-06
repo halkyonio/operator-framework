@@ -13,10 +13,7 @@ type Resource interface {
 	runtime.Object
 	v1beta1.StatusAware
 	NeedsRequeue() bool
-	GetStatusAsString() string
 	ShouldDelete() bool
-	SetErrorStatus(err error) bool
-	SetInitialStatus(msg string) bool
 	ComputeStatus() (needsUpdate bool)
 	CheckValidity() error
 	Init() bool
