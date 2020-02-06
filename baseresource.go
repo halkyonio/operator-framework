@@ -147,22 +147,15 @@ func (b *BaseResource) ComputeStatus(current Resource) (needsUpdate bool) {
 			fetched, err := dependent.Fetch()
 			condition := status.GetConditionFor(dependent.Name(), config.GroupVersionKind)
 			if err != nil {
-				condition.Type = v1beta1.DependentFailed
-				condition.Reason = "Failed" // todo: clean-up Reason vs Type
-				condition.Message = err.Error()
+				needsUpdate = needsUpdate || status.SetCondition(condition, v1beta1.DependentFailed, err.Error())
 			} else {
 				ready, message := dependent.IsReady(fetched)
-				if !ready {
-					condition.Type = v1beta1.DependentPending
-					condition.Reason = "Pending" // todo: clean-up Reason vs Type
-					condition.Message = message
-				} else {
-					condition.Type = v1beta1.DependentReady
-					condition.Reason = "Ready" // todo: clean-up Reason vs Type
-					condition.Message = message
+				conditionType := v1beta1.DependentPending
+				if ready {
+					conditionType = v1beta1.DependentReady
 				}
+				needsUpdate = needsUpdate || status.SetCondition(condition, conditionType, message)
 			}
-			needsUpdate = true
 		}
 	}
 	current.SetStatus(status)
