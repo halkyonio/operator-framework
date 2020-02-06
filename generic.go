@@ -57,11 +57,9 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	initialStatus := resource.GetStatusAsString()
+	status := resource.GetStatus()
+	initialStatus := status.Reason
 	b.logger().Info("-> "+typeName, "name", resource.GetName(), "status", initialStatus)
-	if resource.GetGeneration() == 1 && len(initialStatus) == 0 {
-		resource.SetInitialStatus("Initializing")
-	}
 
 	if resource.Init() {
 		if e := Helper.Client.Update(context.Background(), resource.GetAsHalkyonResource()); e != nil {
@@ -84,13 +82,12 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	requeue := resource.NeedsRequeue()
 
 	// only log exit if status changed to avoid being too verbose
-	newStatus := resource.GetStatusAsString()
-	if newStatus != initialStatus {
+	if status.Reason != initialStatus {
 		msg := "<- " + typeName
 		if requeue {
 			msg += " (requeued)"
 		}
-		b.logger().Info(msg, "name", resource.GetName(), "status", newStatus)
+		b.logger().Info(msg, "name", resource.GetName(), "status", status.Reason)
 	}
 	return reconcile.Result{Requeue: requeue}, nil
 }
@@ -98,17 +95,22 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 func UpdateStatusIfNeeded(instance Resource, err error) error {
 	// update the resource if the status has changed
 	object := instance.GetAsHalkyonResource()
-	initialStatus := instance.GetStatusAsString()
 	logger := LoggerFor(object)
 	updateStatus := false
 	if err == nil {
 		updateStatus = instance.ComputeStatus()
 	} else {
-		updateStatus = instance.SetErrorStatus(err)
+		errMsg := err.Error()
+		status := instance.GetStatus()
+		if "Failed" != status.Reason && errMsg != status.Message {
+			status.Reason = "Failed"
+			status.Message = errMsg
+			instance.SetStatus(status)
+			updateStatus = true
+		}
 		logger.Error(err, fmt.Sprintf("'%s' %s has an error", instance.GetName(), util.GetObjectName(instance.GetAsHalkyonResource())))
 	}
-	newStatus := instance.GetStatusAsString()
-	if updateStatus || initialStatus != newStatus {
+	if updateStatus {
 		if e := Helper.Client.Status().Update(context.Background(), object); e != nil {
 			logger.Error(e, fmt.Sprintf("failed to update status for '%s' %s", instance.GetName(), util.GetObjectName(object)))
 			return e
