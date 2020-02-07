@@ -135,4 +135,6 @@ func requestedArg(dependent framework.DependentResource, req PluginRequest) runt
 
 func init() {
 	gob.Register(&unstructured.Unstructured{})
+	gob.Register(map[string]interface{}{})
+	gob.Register([]interface{}{})
 }
