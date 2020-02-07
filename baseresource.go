@@ -3,8 +3,11 @@ package framework
 import (
 	"fmt"
 	"halkyon.io/api/v1beta1"
+	"halkyon.io/operator-framework/util"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"time"
 )
 
 type BaseResource struct {
@@ -141,6 +144,7 @@ func (b *BaseResource) AddDependentResource(resources ...DependentResource) []De
 func (b *BaseResource) ComputeStatus(current Resource) (needsUpdate bool) {
 	// todo: compute whether we need to update the resource
 	status := current.GetStatus()
+	overallReady := true
 	for _, dependent := range b.dependents {
 		config := dependent.GetConfig()
 		if config.CheckedForReadiness {
@@ -154,10 +158,27 @@ func (b *BaseResource) ComputeStatus(current Resource) (needsUpdate bool) {
 				if ready {
 					conditionType = v1beta1.DependentReady
 				}
+				overallReady = overallReady && ready
 				needsUpdate = needsUpdate || status.SetCondition(condition, conditionType, message)
 			}
 		}
 	}
-	current.SetStatus(status)
+	if overallReady {
+		if status.Reason != v1beta1.ReasonReady {
+			needsUpdate = true
+			status.Reason = v1beta1.ReasonReady
+			status.Message = v1beta1.ReasonReady
+		}
+	} else {
+		if status.Reason != v1beta1.ReasonPending {
+			needsUpdate = true
+			status.Reason = v1beta1.ReasonPending
+			status.Message = fmt.Sprintf("Run `kubectl describe %s %s` for details on dependent conditions", util.GetObjectName(current.PrimaryResourceType()), current.GetName())
+		}
+	}
+	if needsUpdate {
+		status.LastUpdate = v1.NewTime(time.Now())
+		current.SetStatus(status)
+	}
 	return
 }
