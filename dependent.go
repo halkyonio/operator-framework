@@ -16,7 +16,7 @@ type DependentResource interface {
 	Fetch() (runtime.Object, error)
 	Build(empty bool) (runtime.Object, error)
 	Update(toUpdate runtime.Object) (bool, error)
-	IsReady(underlying runtime.Object) (ready bool, message string)
+	GetCondition(underlying runtime.Object, err error) *v1beta1.DependentCondition
 	GetConfig() DependentResourceConfig
 }
 

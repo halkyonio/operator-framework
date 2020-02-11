@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	halkyon "halkyon.io/api/capability/v1beta1"
+	"halkyon.io/api/v1beta1"
 	framework "halkyon.io/operator-framework"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,7 +20,7 @@ type PluginServer interface {
 	GetCategory(req PluginRequest, res *halkyon.CapabilityCategory) error
 	GetDependentResourceTypes(req PluginRequest, res *[]schema.GroupVersionKind) error
 	GetTypes(req PluginRequest, res *[]TypeInfo) error
-	IsReady(req PluginRequest, res *IsReadyResponse) error
+	GetCondition(req PluginRequest, res *v1beta1.DependentCondition) error
 	Name(req PluginRequest, res *string) error
 	NameFrom(req PluginRequest, res *string) error
 	Update(req PluginRequest, res *UpdateResponse) error
@@ -85,13 +86,9 @@ func (p PluginServerImpl) GetTypes(req PluginRequest, res *[]TypeInfo) error {
 	return nil
 }
 
-func (p PluginServerImpl) IsReady(req PluginRequest, res *IsReadyResponse) error {
+func (p PluginServerImpl) GetCondition(req PluginRequest, res *v1beta1.DependentCondition) error {
 	resource := p.dependentResourceFor(req)
-	ready, message := resource.IsReady(requestedArg(resource, req))
-	*res = IsReadyResponse{
-		Ready:   ready,
-		Message: message,
-	}
+	res = resource.GetCondition(requestedArg(resource, req), req.Error)
 	return nil
 }
 
