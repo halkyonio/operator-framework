@@ -27,8 +27,8 @@ func (res Role) Fetch() (runtime.Object, error) {
 	return DefaultFetcher(res)
 }
 
-func (res Role) IsReady(underlying runtime.Object) (ready bool, message string) {
-	return DefaultIsReady(underlying)
+func (res Role) GetCondition(_ runtime.Object, err error) *v1beta1.DependentCondition {
+	return DefaultGetConditionFor(res, err)
 }
 
 var _ DependentResource = &Role{}

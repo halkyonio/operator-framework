@@ -29,8 +29,8 @@ func (res RoleBinding) Fetch() (runtime.Object, error) {
 	return DefaultFetcher(res)
 }
 
-func (res RoleBinding) IsReady(underlying runtime.Object) (ready bool, message string) {
-	return DefaultIsReady(underlying)
+func (res RoleBinding) GetCondition(_ runtime.Object, err error) *v1beta1.DependentCondition {
+	return DefaultGetConditionFor(res, err)
 }
 
 var _ DependentResource = &RoleBinding{}

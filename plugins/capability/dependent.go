@@ -59,11 +59,10 @@ func (p PluginDependentResource) Update(toUpdate runtime.Object) (bool, error) {
 	return res.NeedsUpdate, res.Error
 }
 
-func (p PluginDependentResource) IsReady(underlying runtime.Object) (ready bool, message string) {
-	res := IsReadyResponse{}
-	p.client.call("IsReady", p.gvk, &res, underlying)
-	return res.Ready, res.Message
-
+func (p *PluginDependentResource) GetCondition(underlying runtime.Object, err error) (res *v1beta1.DependentCondition) {
+	method := "GetCondition"
+	p.client.callWithRequest(method, p.client.createRequest(method, p.gvk, err, underlying), res)
+	return res
 }
 
 func (p *PluginDependentResource) GetConfig() framework.DependentResourceConfig {
