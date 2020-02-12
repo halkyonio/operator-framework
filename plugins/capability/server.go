@@ -88,7 +88,7 @@ func (p PluginServerImpl) GetTypes(req PluginRequest, res *[]TypeInfo) error {
 
 func (p PluginServerImpl) GetCondition(req PluginRequest, res *v1beta1.DependentCondition) error {
 	resource := p.dependentResourceFor(req)
-	res = resource.GetCondition(requestedArg(resource, req), req.Error)
+	*res = *resource.GetCondition(requestedArg(resource, req), nil)
 	return nil
 }
 
