@@ -60,9 +60,13 @@ func (p PluginDependentResource) Update(toUpdate runtime.Object) (bool, error) {
 }
 
 func (p *PluginDependentResource) GetCondition(underlying runtime.Object, err error) (res *v1beta1.DependentCondition) {
-	method := "GetCondition"
-	p.client.callWithRequest(method, p.client.createRequest(method, p.gvk, err, underlying), res)
-	return res
+	// we cannot serialize the error, so have to rely on default error handling
+	if c := framework.ErrorDependentCondition(p, err); c != nil {
+		return c
+	}
+	res = &v1beta1.DependentCondition{}
+	p.client.call("GetCondition", p.gvk, res, underlying)
+	return
 }
 
 func (p *PluginDependentResource) GetConfig() framework.DependentResourceConfig {

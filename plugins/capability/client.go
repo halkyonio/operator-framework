@@ -146,7 +146,7 @@ func NewPlugin(path string, log logr.Logger) (Plugin, error) {
 }
 
 func (p *PluginClient) call(method string, targetDependentType schema.GroupVersionKind, result interface{}, underlying ...runtime.Object) {
-	request := p.createRequest(method, targetDependentType, nil, underlying...)
+	request := p.createRequest(method, targetDependentType, underlying...)
 	p.callWithRequest(method, request, result)
 }
 
@@ -157,7 +157,7 @@ func (p *PluginClient) callWithRequest(method string, request PluginRequest, res
 	}
 }
 
-func (p *PluginClient) createRequest(method string, targetDependentType schema.GroupVersionKind, err error, underlying ...runtime.Object) PluginRequest {
+func (p *PluginClient) createRequest(method string, targetDependentType schema.GroupVersionKind, underlying ...runtime.Object) PluginRequest {
 	if len(underlying) > 1 {
 		p.log.Error(fmt.Errorf("error calling %s on %s plugin", method, p.name), fmt.Sprintf("call only accepts one extra argument, was given %v", underlying))
 	}
@@ -170,9 +170,6 @@ func (p *PluginClient) createRequest(method string, targetDependentType schema.G
 	}
 	if len(underlying) == 1 {
 		request.setArg(underlying[0])
-	}
-	if err != nil {
-		request.Error = err
 	}
 	return request
 }

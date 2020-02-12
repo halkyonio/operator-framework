@@ -86,6 +86,7 @@ func (p PluginServerImpl) GetTypes(req PluginRequest, res *[]TypeInfo) error {
 	return nil
 }
 
+// Currently, plugins cannot process the error and must rely on default error handling
 func (p PluginServerImpl) GetCondition(req PluginRequest, res *v1beta1.DependentCondition) error {
 	resource := p.dependentResourceFor(req)
 	*res = *resource.GetCondition(requestedArg(resource, req), nil)

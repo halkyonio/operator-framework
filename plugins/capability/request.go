@@ -12,7 +12,6 @@ type PluginRequest struct {
 	Owner  v1beta1.HalkyonResource
 	Target schema.GroupVersionKind
 	Arg    *unstructured.Unstructured
-	Error  error
 }
 
 func (p *PluginRequest) setArg(object runtime.Object) {
