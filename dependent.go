@@ -49,7 +49,7 @@ func CreateOrUpdate(r DependentResource) error {
 		return nil
 	}
 
-	kind := config.TypeName()
+	kind := config.TypeName
 	object, err := r.Fetch()
 	logger := LoggerFor(r.Owner())
 	if err != nil {
