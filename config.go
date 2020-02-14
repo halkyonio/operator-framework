@@ -11,6 +11,7 @@ type DependentResourceConfig struct {
 	CheckedForReadiness bool
 	OwnerStatusField    string
 	GroupVersionKind    schema.GroupVersionKind
+	TypeName            string
 }
 
 var defaultConfig = DependentResourceConfig{
@@ -29,9 +30,6 @@ func NewConfig(gvk schema.GroupVersionKind) DependentResourceConfig {
 		CheckedForReadiness: defaultConfig.CheckedForReadiness,
 		OwnerStatusField:    defaultConfig.OwnerStatusField,
 		GroupVersionKind:    gvk,
+		TypeName:            gvk.Kind,
 	}
-}
-
-func (c DependentResourceConfig) TypeName() string {
-	return c.GroupVersionKind.Kind
 }

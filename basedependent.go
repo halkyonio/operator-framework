@@ -51,7 +51,7 @@ func ErrorDependentCondition(dep DependentResource, err error) *v1beta1.Dependen
 		if errors.IsNotFound(err) {
 			d.Type = v1beta1.DependentPending
 			d.Reason = string(v1beta1.DependentPending)
-			d.Message = fmt.Sprintf("%s '%s' was not found", config.TypeName(), d.DependentName)
+			d.Message = fmt.Sprintf("%s '%s' was not found: %s", config.TypeName, d.DependentName, err.Error())
 		}
 		return d
 	}

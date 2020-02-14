@@ -32,7 +32,7 @@ func NewHasDependents(primary runtime.Object) *BaseResource {
 func (b *BaseResource) CreateOrUpdateDependents() error {
 	for _, dep := range b.dependents {
 		if e := CreateOrUpdate(dep); e != nil {
-			return fmt.Errorf("failed to create or update '%s' %s: %s", dep.Name(), dep.GetConfig().TypeName(), e.Error())
+			return fmt.Errorf("failed to create or update '%s' %s: %s", dep.Name(), dep.GetConfig().TypeName, e.Error())
 		}
 	}
 	return nil
