@@ -52,11 +52,10 @@ func (p PluginDependentResource) Build(_ bool) (runtime.Object, error) {
 	return b.Built, nil
 }
 
-func (p PluginDependentResource) Update(toUpdate runtime.Object) (bool, error) {
+func (p PluginDependentResource) Update(toUpdate runtime.Object) (bool, runtime.Object, error) {
 	res := UpdateResponse{}
 	p.client.call("Update", p.gvk, &res, toUpdate)
-	toUpdate = res.Updated
-	return res.NeedsUpdate, res.Error
+	return res.NeedsUpdate, res.Updated, res.Error
 }
 
 func (p *PluginDependentResource) GetCondition(underlying runtime.Object, err error) (res *v1beta1.DependentCondition) {

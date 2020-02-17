@@ -15,7 +15,7 @@ type DependentResource interface {
 	NameFrom(underlying runtime.Object) string
 	Fetch() (runtime.Object, error)
 	Build(empty bool) (runtime.Object, error)
-	Update(toUpdate runtime.Object) (bool, error)
+	Update(toUpdate runtime.Object) (bool, runtime.Object, error)
 	GetCondition(underlying runtime.Object, err error) *v1beta1.DependentCondition
 	GetConfig() DependentResourceConfig
 }
@@ -89,14 +89,15 @@ func CreateOrUpdate(r DependentResource) error {
 	} else {
 		if config.Updated {
 			// if the resource defined an updater, use it to try to update the resource
-			updated, err := r.Update(object)
+			updated, toUpdate, err := r.Update(object)
 			if err != nil {
 				return err
 			}
 			if updated {
-				if err = Helper.Client.Update(context.TODO(), object); err != nil {
+				if err = Helper.Client.Update(context.TODO(), toUpdate); err != nil {
 					logger.Error(err, "Failed to update", "kind", kind)
 				}
+				logger.Info("Updated successfully", "kind", kind, "name", object.(v1.Object).GetName())
 			}
 			return err
 		}

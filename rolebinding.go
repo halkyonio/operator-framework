@@ -35,7 +35,7 @@ func (res RoleBinding) GetCondition(_ runtime.Object, err error) *v1beta1.Depend
 
 var _ DependentResource = &RoleBinding{}
 
-func (res RoleBinding) Update(toUpdate runtime.Object) (bool, error) {
+func (res RoleBinding) Update(toUpdate runtime.Object) (bool, runtime.Object, error) {
 	// add appropriate subject for owner
 	rb := toUpdate.(*authorizv1.RoleBinding)
 	owner := res.Owner()
@@ -59,7 +59,7 @@ func (res RoleBinding) Update(toUpdate runtime.Object) (bool, error) {
 		})
 	}
 
-	return !found, nil
+	return !found, toUpdate, nil
 }
 
 func NewOwnedRoleBinding(owner NeedsRoleBinding) RoleBinding {
