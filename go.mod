@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/hashicorp/go-hclog v0.0.0-20180709165350-ff2cf002a8dd
 	github.com/hashicorp/go-plugin v1.0.1
-	halkyon.io/api v1.0.0-rc.4.0.20200212202030-807049267e38
+	halkyon.io/api v1.0.0-rc.4.0.20200217221003-af8973318c2d
 	k8s.io/api v0.0.0-20190918195907-bd6ac527cfd2
 	k8s.io/apimachinery v0.17.0
 	k8s.io/client-go v11.0.1-0.20190805182715-88a2adca7e76+incompatible
