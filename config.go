@@ -7,7 +7,8 @@ import (
 type DependentResourceConfig struct {
 	Watched             bool
 	Owned               bool
-	CreatedOrUpdated    bool
+	Created             bool
+	Updated             bool
 	CheckedForReadiness bool
 	OwnerStatusField    string
 	GroupVersionKind    schema.GroupVersionKind
@@ -17,7 +18,8 @@ type DependentResourceConfig struct {
 var defaultConfig = DependentResourceConfig{
 	Watched:             true,
 	Owned:               true,
-	CreatedOrUpdated:    true,
+	Created:             true,
+	Updated:             false,
 	CheckedForReadiness: false,
 	OwnerStatusField:    "",
 }
@@ -26,7 +28,8 @@ func NewConfig(gvk schema.GroupVersionKind) DependentResourceConfig {
 	return DependentResourceConfig{
 		Watched:             defaultConfig.Watched,
 		Owned:               defaultConfig.Owned,
-		CreatedOrUpdated:    defaultConfig.CreatedOrUpdated,
+		Created:             defaultConfig.Created,
+		Updated:             defaultConfig.Updated,
 		CheckedForReadiness: defaultConfig.CheckedForReadiness,
 		OwnerStatusField:    defaultConfig.OwnerStatusField,
 		GroupVersionKind:    gvk,

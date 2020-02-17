@@ -45,7 +45,7 @@ func NewReadyDependentResourceStatus(dependentName string, fieldName string) Dep
 func CreateOrUpdate(r DependentResource) error {
 	// if the resource specifies that it shouldn't be created, exit fast
 	config := r.GetConfig()
-	if !config.CreatedOrUpdated {
+	if !config.Created && !config.Updated {
 		return nil
 	}
 
@@ -53,7 +53,7 @@ func CreateOrUpdate(r DependentResource) error {
 	object, err := r.Fetch()
 	logger := LoggerFor(r.Owner())
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if config.Created && errors.IsNotFound(err) {
 			// create the object
 			obj, errBuildObject := r.Build(false)
 			if errBuildObject != nil {
@@ -87,16 +87,19 @@ func CreateOrUpdate(r DependentResource) error {
 		logger.Error(err, "Failed to get", "kind", kind)
 		return err
 	} else {
-		// if the resource defined an updater, use it to try to update the resource
-		updated, err := r.Update(object)
-		if err != nil {
+		if config.Updated {
+			// if the resource defined an updater, use it to try to update the resource
+			updated, err := r.Update(object)
+			if err != nil {
+				return err
+			}
+			if updated {
+				if err = Helper.Client.Update(context.TODO(), object); err != nil {
+					logger.Error(err, "Failed to update", "kind", kind)
+				}
+			}
 			return err
 		}
-		if updated {
-			if err = Helper.Client.Update(context.TODO(), object); err != nil {
-				logger.Error(err, "Failed to update", "kind", kind)
-			}
-		}
-		return err
+		return nil
 	}
 }
