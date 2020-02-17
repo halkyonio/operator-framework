@@ -33,8 +33,8 @@ func (res Role) GetCondition(_ runtime.Object, err error) *v1beta1.DependentCond
 
 var _ DependentResource = &Role{}
 
-func (res Role) Update(toUpdate runtime.Object) (bool, error) {
-	return false, nil
+func (res Role) Update(_ runtime.Object) (bool, runtime.Object, error) {
+	return false, nil, nil
 }
 
 func NewOwnedRole(owner NeedsRole) Role {

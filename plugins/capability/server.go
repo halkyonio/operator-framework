@@ -107,11 +107,16 @@ func (p PluginServerImpl) NameFrom(req PluginRequest, res *string) error {
 
 func (p PluginServerImpl) Update(req PluginRequest, res *UpdateResponse) error {
 	resource := p.dependentResourceFor(req)
-	update, err := resource.Update(requestedArg(resource, req))
+	toUpdate := requestedArg(resource, req)
+	update, toUpdate, err := resource.Update(toUpdate)
+	if err != nil {
+		return err
+	}
+	updateAsUnstructured, err := framework.CreateUnstructuredObject(toUpdate, req.Target)
 	*res = UpdateResponse{
 		NeedsUpdate: update,
 		Error:       err,
-		Updated:     req.Arg,
+		Updated:     updateAsUnstructured,
 	}
 	return err
 }
