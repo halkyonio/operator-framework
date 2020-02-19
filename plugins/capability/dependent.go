@@ -13,7 +13,7 @@ type PluginDependentResource struct {
 	client *PluginClient
 	config *framework.DependentResourceConfig
 	gvk    schema.GroupVersionKind
-	owner  v1beta1.HalkyonResource
+	owner  framework.SerializableResource
 	name   *string
 }
 
@@ -28,7 +28,7 @@ func (p *PluginDependentResource) Name() string {
 	return *p.name
 }
 
-func (p PluginDependentResource) Owner() v1beta1.HalkyonResource {
+func (p PluginDependentResource) Owner() framework.SerializableResource {
 	return p.owner
 }
 

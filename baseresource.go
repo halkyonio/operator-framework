@@ -41,7 +41,7 @@ func (b *BaseResource) CreateOrUpdateDependents() error {
 func FetchAndInitNewResource(name string, namespace string, toInit Resource, callback WatchCallback) (Resource, error) {
 	toInit.SetName(name)
 	toInit.SetNamespace(namespace)
-	_, err := Helper.Fetch(name, namespace, toInit.GetAsHalkyonResource())
+	_, err := Helper.Fetch(name, namespace, toInit.GetUnderlyingAPIResource())
 	if err != nil {
 		return toInit, err
 	}

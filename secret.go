@@ -15,7 +15,7 @@ var _ DependentResource = &Secret{}
 type NeedsSecret interface {
 	GetDataMap() map[string][]byte
 	GetSecretName() string
-	Owner() v1beta1.HalkyonResource
+	Owner() SerializableResource
 }
 
 type Secret struct {

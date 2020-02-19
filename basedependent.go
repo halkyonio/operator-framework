@@ -10,14 +10,14 @@ import (
 
 type BaseDependentResource struct {
 	config DependentResourceConfig
-	owner  v1beta1.HalkyonResource
+	owner  SerializableResource
 }
 
-func NewBaseDependentResource(owner v1beta1.HalkyonResource, dependentType schema.GroupVersionKind) *BaseDependentResource {
+func NewBaseDependentResource(owner SerializableResource, dependentType schema.GroupVersionKind) *BaseDependentResource {
 	return NewConfiguredBaseDependentResource(owner, NewConfig(dependentType))
 }
 
-func NewConfiguredBaseDependentResource(owner v1beta1.HalkyonResource, config DependentResourceConfig) *BaseDependentResource {
+func NewConfiguredBaseDependentResource(owner SerializableResource, config DependentResourceConfig) *BaseDependentResource {
 	return &BaseDependentResource{
 		config: config,
 		owner:  owner,
@@ -33,7 +33,7 @@ func DefaultFetcher(dep DependentResource) (runtime.Object, error) {
 	return Helper.Fetch(dep.Name(), dep.Owner().GetNamespace(), into)
 }
 
-func DefaultDependentResourceNameFor(owner v1beta1.HalkyonResource) string {
+func DefaultDependentResourceNameFor(owner SerializableResource) string {
 	return owner.GetName()
 }
 
@@ -86,6 +86,6 @@ func (b BaseDependentResource) GetConfig() DependentResourceConfig {
 	return b.config
 }
 
-func (b BaseDependentResource) Owner() v1beta1.HalkyonResource {
+func (b BaseDependentResource) Owner() SerializableResource {
 	return b.owner
 }

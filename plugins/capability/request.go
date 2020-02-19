@@ -1,7 +1,6 @@
 package capability
 
 import (
-	"halkyon.io/api/v1beta1"
 	framework "halkyon.io/operator-framework"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -9,7 +8,7 @@ import (
 )
 
 type PluginRequest struct {
-	Owner  v1beta1.HalkyonResource
+	Owner  framework.SerializableResource
 	Target schema.GroupVersionKind
 	Arg    *unstructured.Unstructured
 }
