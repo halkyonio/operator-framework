@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"halkyon.io/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
@@ -49,4 +50,13 @@ func GetGVKFor(object runtime.Object, scheme *runtime.Scheme) schema.GroupVersio
 		panic(err)
 	}
 	return gvk
+}
+
+// Convert Array of parameters to a Map
+func ParametersAsMap(parameters []v1beta1.NameValuePair) map[string]string {
+	result := make(map[string]string)
+	for _, parameter := range parameters {
+		result[parameter.Name] = parameter.Value
+	}
+	return result
 }
