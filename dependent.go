@@ -20,28 +20,6 @@ type DependentResource interface {
 	GetConfig() DependentResourceConfig
 }
 
-type DependentResourceStatus struct {
-	DependentName    string
-	Ready            bool
-	Message          string
-	OwnerStatusField string
-}
-
-func NewFailedDependentResourceStatus(dependentName string, errorOrMessage interface{}) DependentResourceStatus {
-	msg := ""
-	switch errorOrMessage.(type) {
-	case string:
-		msg = errorOrMessage.(string)
-	case error:
-		msg = errorOrMessage.(error).Error()
-	}
-	return DependentResourceStatus{DependentName: dependentName, Ready: false, Message: msg}
-}
-
-func NewReadyDependentResourceStatus(dependentName string, fieldName string) DependentResourceStatus {
-	return DependentResourceStatus{DependentName: dependentName, OwnerStatusField: fieldName, Ready: true}
-}
-
 func CreateOrUpdate(r DependentResource) error {
 	// if the resource specifies that it shouldn't be created, exit fast
 	config := r.GetConfig()
