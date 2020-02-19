@@ -13,7 +13,7 @@ type NeedsRoleBinding interface {
 	GetRoleBindingName() string
 	GetAssociatedRoleName() string
 	GetServiceAccountName() string
-	Owner() v1beta1.HalkyonResource
+	Owner() SerializableResource
 }
 
 type RoleBinding struct {

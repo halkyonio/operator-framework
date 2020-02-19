@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-hclog"
 	halkyon "halkyon.io/api/capability/v1beta1"
-	"halkyon.io/api/v1beta1"
 	framework "halkyon.io/operator-framework"
 	"reflect"
 )
@@ -20,7 +19,7 @@ type PluginResource interface {
 	// GetDependentResourcesWith returns an ordered list of DependentResources initialized with the specified owner.
 	// DependentResources represent secondary resources that the capability might need to work (e.g. Kubernetes Role or Secret)
 	// along with the resource (if it exists) implementing the capability itself (e.g. KubeDB's Postgres).
-	GetDependentResourcesWith(owner v1beta1.HalkyonResource) []framework.DependentResource
+	GetDependentResourcesWith(owner framework.SerializableResource) []framework.DependentResource
 }
 
 type SimplePluginResourceStem struct {
@@ -107,7 +106,7 @@ func (a AggregatePluginResource) GetSupportedTypes() []TypeInfo {
 	return types
 }
 
-func (a AggregatePluginResource) GetDependentResourcesWith(owner v1beta1.HalkyonResource) []framework.DependentResource {
+func (a AggregatePluginResource) GetDependentResourcesWith(owner framework.SerializableResource) []framework.DependentResource {
 	capType := typeKey(owner.(*halkyon.Capability).Spec.Type)
 	return a.pluginResources[capType].GetDependentResourcesWith(owner)
 }

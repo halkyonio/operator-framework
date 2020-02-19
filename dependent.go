@@ -11,7 +11,7 @@ import (
 
 type DependentResource interface {
 	Name() string
-	Owner() v1beta1.HalkyonResource
+	Owner() SerializableResource
 	NameFrom(underlying runtime.Object) string
 	Fetch() (runtime.Object, error)
 	Build(empty bool) (runtime.Object, error)

@@ -11,7 +11,7 @@ var RoleGVK = authorizv1.SchemeGroupVersion.WithKind("Role")
 
 type NeedsRole interface {
 	GetRoleName() string
-	Owner() v1beta1.HalkyonResource
+	Owner() SerializableResource
 }
 
 type Role struct {

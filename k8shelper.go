@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
-	"halkyon.io/api/v1beta1"
 	"halkyon.io/operator-framework/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,7 +34,7 @@ func (rh K8SHelper) Fetch(name, namespace string, into runtime.Object) (runtime.
 	return into, nil
 }
 
-func LoggerFor(resourceType v1beta1.HalkyonResource) logr.Logger {
+func LoggerFor(resourceType SerializableResource) logr.Logger {
 	name := controllerNameFor(resourceType)
 	return loggers[name]
 }

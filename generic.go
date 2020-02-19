@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
-	"halkyon.io/api/v1beta1"
 	"halkyon.io/operator-framework/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -29,7 +28,7 @@ type GenericReconciler struct {
 }
 
 func (b *GenericReconciler) logger() logr.Logger {
-	return LoggerFor(b.resource.GetAsHalkyonResource())
+	return LoggerFor(b.resource.GetUnderlyingAPIResource())
 }
 
 func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
@@ -62,7 +61,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	b.logger().Info("-> "+typeName, "name", resource.GetName(), "status", initialStatus)
 
 	if resource.Init() {
-		if e := Helper.Client.Update(context.Background(), resource.GetAsHalkyonResource()); e != nil {
+		if e := Helper.Client.Update(context.Background(), resource.GetUnderlyingAPIResource()); e != nil {
 			b.logger().Error(e, fmt.Sprintf("failed to update '%s' %s", resource.GetName(), typeName))
 		}
 		return reconcile.Result{}, nil
@@ -94,7 +93,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 
 func UpdateStatusIfNeeded(instance Resource, err error) error {
 	// update the resource if the status has changed
-	object := instance.GetAsHalkyonResource()
+	object := instance.GetUnderlyingAPIResource()
 	logger := LoggerFor(object)
 	updateStatus := false
 	if err == nil {
@@ -108,7 +107,7 @@ func UpdateStatusIfNeeded(instance Resource, err error) error {
 			instance.SetStatus(status)
 			updateStatus = true
 		}
-		logger.Error(err, fmt.Sprintf("'%s' %s has an error", instance.GetName(), util.GetObjectName(instance.GetAsHalkyonResource())))
+		logger.Error(err, fmt.Sprintf("'%s' %s has an error", instance.GetName(), util.GetObjectName(instance.GetUnderlyingAPIResource())))
 	}
 	if updateStatus {
 		if e := Helper.Client.Status().Update(context.Background(), object); e != nil {
@@ -151,7 +150,7 @@ func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 	return nil
 }
 
-type WatchCallback func(owner v1beta1.HalkyonResource, dependentGVK schema.GroupVersionKind) error
+type WatchCallback func(owner SerializableResource, dependentGVK schema.GroupVersionKind) error
 
 var (
 	callbacks = make(map[string]WatchCallback, 7)
@@ -161,7 +160,7 @@ var (
 )
 
 func createCallbackFor(c controller.Controller) WatchCallback {
-	return func(resource v1beta1.HalkyonResource, dependentGVK schema.GroupVersionKind) error {
+	return func(resource SerializableResource, dependentGVK schema.GroupVersionKind) error {
 		// if we're not already watching this secondary resource
 		mutex.Lock()
 		notAlreadyWatched := !watched[dependentGVK]
