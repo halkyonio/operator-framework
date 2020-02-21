@@ -2,6 +2,7 @@ package capability
 
 import (
 	"fmt"
+	"github.com/go-logr/logr"
 	"halkyon.io/api/capability-info/clientset/versioned"
 	"halkyon.io/api/capability-info/v1beta1"
 	halkyon "halkyon.io/api/capability/v1beta1"
@@ -90,4 +91,28 @@ func register(p *PluginClient) {
 		types[typeKey] = p
 		p.log.Info(fmt.Sprintf("Registered plugin named '%s' for category '%s' / type '%s' pair", p.name, category, t))
 	}
+}
+
+func PurgeCapabilityInfos(log logr.Logger) (purgedCount int, err error) {
+	existing, err := capInfoClient.List(v1.ListOptions{})
+	if err != nil {
+		return 0, err
+	}
+
+	msgs := make([]string, 0, len(existing.Items))
+	for _, info := range existing.Items {
+		_, err := GetPluginFor(halkyon.CapabilityCategory(info.Spec.Category), halkyon.CapabilityType(info.Spec.Type))
+		if err != nil {
+			// plugin for info doesn't exist, so we should remove it
+			if err := capInfoClient.Delete(info.Name, v1.NewDeleteOptions(0)); err != nil {
+				msgs = append(msgs, fmt.Sprintf("%s: %s", info.Name, err.Error()))
+			}
+			log.Info(fmt.Sprintf("purged %s CapabilityInfo", info.Name))
+			purgedCount++
+		}
+	}
+	if len(msgs) > 0 {
+		err = fmt.Errorf("couldn't delete CapabilityInfo(s): %s", strings.Join(msgs, ", "))
+	}
+	return
 }
