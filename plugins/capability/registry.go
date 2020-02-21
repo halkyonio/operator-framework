@@ -80,7 +80,7 @@ func register(p *PluginClient) {
 			}
 		}
 
-		// if an error occurred at any time, log it and ignore the
+		// if an error occurred at any time, log it and ignore the capability
 		if err != nil {
 			p.log.Error(err, fmt.Sprintf("couldn't create or update capabilityinfo named '%s', associated capability will be ignored", capabilityName))
 			continue
