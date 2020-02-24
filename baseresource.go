@@ -68,30 +68,6 @@ func FetchAndInitNewResource(name string, namespace string, toInit Resource, cal
 	return toInit, err
 }
 
-type Predicate interface {
-	Matches(resource DependentResource) bool
-}
-
-type TypePredicate struct {
-	gvk  schema.GroupVersionKind
-	desc string
-}
-
-func (tp TypePredicate) Matches(resource DependentResource) bool {
-	return resource.GetConfig().GroupVersionKind == tp.gvk
-}
-
-func (tp TypePredicate) String() string {
-	return tp.desc
-}
-
-func TypePredicateFor(gvk schema.GroupVersionKind) Predicate {
-	return TypePredicate{
-		gvk:  gvk,
-		desc: fmt.Sprintf("GetConfig().GroupVersionKind == %v", gvk),
-	}
-}
-
 func (b *BaseResource) GetDependent(predicate Predicate) (DependentResource, error) {
 	var dependent DependentResource
 	matching := 0
