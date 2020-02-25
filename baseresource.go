@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"halkyon.io/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type BaseResource struct {
@@ -32,7 +31,8 @@ func NewHasDependents(primary runtime.Object) *BaseResource {
 func (b *BaseResource) CreateOrUpdateDependents() error {
 	for _, dep := range b.dependents {
 		if e := CreateOrUpdate(dep); e != nil {
-			return fmt.Errorf("failed to create or update '%s' %s: %s", dep.Name(), dep.GetConfig().TypeName, e.Error())
+			// wrap error so that downstream client can process the original error based on needs
+			return fmt.Errorf("failed to create or update '%s' %s: %w", dep.Name(), dep.GetConfig().TypeName, e)
 		}
 	}
 	return nil
@@ -127,4 +127,14 @@ func (b *BaseResource) ComputeStatus(current Resource) (needsUpdate bool) {
 		current.SetStatus(status)
 	}
 	return
+}
+
+func DefaultErrorHandler(status v1beta1.Status, err error) (updated bool, updatedStatus v1beta1.Status) {
+	errMsg := err.Error()
+	if "Failed" != status.Reason && errMsg != status.Message {
+		status.Reason = "Failed"
+		status.Message = errMsg
+		return true, status
+	}
+	return false, status
 }

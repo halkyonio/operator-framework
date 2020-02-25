@@ -99,13 +99,10 @@ func UpdateStatusIfNeeded(instance Resource, err error) error {
 	if err == nil {
 		updateStatus = instance.ComputeStatus()
 	} else {
-		errMsg := err.Error()
 		status := instance.GetStatus()
-		if "Failed" != status.Reason && errMsg != status.Message {
-			status.Reason = "Failed"
-			status.Message = errMsg
+		updateStatus, status = instance.Handle(err)
+		if updateStatus {
 			instance.SetStatus(status)
-			updateStatus = true
 		}
 		logger.Error(err, fmt.Sprintf("'%s' %s has an error", instance.GetName(), util.GetObjectName(instance.GetUnderlyingAPIResource())))
 	}
