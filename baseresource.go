@@ -101,7 +101,7 @@ func (b *BaseResource) ComputeStatus(current Resource) (needsUpdate bool) {
 
 func DefaultErrorHandler(status v1beta1.Status, err error) (updated bool, updatedStatus v1beta1.Status) {
 	errMsg := err.Error()
-	if "Failed" != status.Reason && errMsg != status.Message {
+	if "Failed" != status.Reason || errMsg != status.Message {
 		status.Reason = "Failed"
 		status.Message = errMsg
 		return true, status
