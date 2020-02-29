@@ -70,7 +70,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	// Check the validity of the resource
 	if err := resource.CheckValidity(); err != nil {
-		err = UpdateStatusIfNeeded(resource, err)
+		err = UpdateStatusIfNeeded(resource, fmt.Errorf("validation error(s): %v", err))
 		return reconcile.Result{}, err
 	}
 
