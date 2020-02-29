@@ -23,9 +23,10 @@ type PluginResource interface {
 }
 
 type SimplePluginResourceStem struct {
-	ct   []TypeInfo
-	cc   halkyon.CapabilityCategory
-	name string
+	ct     []TypeInfo
+	cc     halkyon.CapabilityCategory
+	name   string
+	Logger hclog.Logger
 }
 
 func NewSimplePluginResourceStem(cat halkyon.CapabilityCategory, typ TypeInfo) SimplePluginResourceStem {
@@ -39,6 +40,10 @@ func (p SimplePluginResourceStem) GetSupportedTypes() []TypeInfo {
 	return p.ct
 }
 
+func (p *SimplePluginResourceStem) SetLogger(logger hclog.Logger) {
+	p.Logger = logger
+}
+
 func (p SimplePluginResourceStem) GetPrefixedValidationMessage(msg string) string {
 	return fmt.Sprintf("%s: %s", p.name, msg)
 }
@@ -50,7 +55,6 @@ type NeedsLogging interface {
 type QueryingSimplePluginResourceStem struct {
 	SimplePluginResourceStem
 	resolver func(logger hclog.Logger) TypeInfo
-	Logger   hclog.Logger
 }
 
 func NewQueryingSimplePluginResourceStem(cat halkyon.CapabilityCategory, typeInfoResolver func(logger hclog.Logger) TypeInfo) QueryingSimplePluginResourceStem {
@@ -65,10 +69,6 @@ func (p *QueryingSimplePluginResourceStem) GetSupportedTypes() []TypeInfo {
 		p.ct = []TypeInfo{p.resolver(p.Logger)}
 	}
 	return p.ct
-}
-
-func (p *QueryingSimplePluginResourceStem) SetLogger(logger hclog.Logger) {
-	p.Logger = logger
 }
 
 var _ PluginResource = &AggregatePluginResource{}
