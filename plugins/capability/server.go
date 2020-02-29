@@ -40,7 +40,7 @@ func (p PluginServerImpl) GetConfig(req PluginRequest, res *framework.DependentR
 var _ PluginServer = &PluginServerImpl{}
 
 func StartPluginServerFor(resources ...PluginResource) {
-	pluginName := filepath.Base(os.Args[0])
+	pluginName := GetPluginExecutableName()
 	logger := hclog.New(&hclog.LoggerOptions{
 		Output: hclog.DefaultOutput,
 		Level:  hclog.Trace,
