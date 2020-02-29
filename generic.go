@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
+	"halkyon.io/api/v1beta1"
 	"halkyon.io/operator-framework/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -35,7 +36,10 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	b.logger().WithValues("namespace", request.Namespace)
 
 	// Fetch the primary resource
-	resource, err := FetchAndInitNewResource(request.Name, request.Namespace, b.resource.NewEmpty(), getCallbackFor(b.resource))
+	resource := b.resource.NewEmpty()
+	resource.SetName(request.Name)
+	resource.SetNamespace(request.Namespace)
+	_, err := Helper.Fetch(request.Name, request.Namespace, resource.GetUnderlyingAPIResource())
 	typeName := util.GetObjectName(b.resource.PrimaryResourceType())
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -56,10 +60,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	status := resource.GetStatus()
-	initialStatus := status.Reason
-	b.logger().Info("-> "+typeName, "name", resource.GetName(), "status", initialStatus)
-
+	// Initialize with default values if needed
 	if resource.Init() {
 		if e := Helper.Client.Update(context.Background(), resource.GetUnderlyingAPIResource()); e != nil {
 			b.logger().Error(e, fmt.Sprintf("failed to update '%s' %s", resource.GetName(), typeName))
@@ -67,10 +68,36 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, nil
 	}
 
+	// Check the validity of the resource
 	if err := resource.CheckValidity(); err != nil {
 		err = UpdateStatusIfNeeded(resource, err)
 		return reconcile.Result{}, err
 	}
+
+	// Initialize dependents
+	dependents, err := resource.InitDependentResources()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Initialize status if needed
+	status := resource.GetStatus()
+	if len(status.Conditions) == 0 {
+		status.Conditions = make([]v1beta1.DependentCondition, 0, len(dependents))
+	}
+	for _, dependent := range dependents {
+		// add watch if needed
+		config := dependent.GetConfig()
+		if config.Watched {
+			if err := getCallbackFor(b.resource)(dependent.Owner(), config.GroupVersionKind); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+	}
+	resource.SetStatus(status)
+	initialStatus := status.Reason
+	b.logger().Info("-> "+typeName, "name", resource.GetName(), "status", initialStatus)
+
 	err = resource.CreateOrUpdate()
 
 	// always check status for updates

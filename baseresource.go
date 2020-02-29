@@ -38,36 +38,6 @@ func (b *BaseResource) CreateOrUpdateDependents() error {
 	return nil
 }
 
-func FetchAndInitNewResource(name string, namespace string, toInit Resource, callback WatchCallback) (Resource, error) {
-	toInit.SetName(name)
-	toInit.SetNamespace(namespace)
-	_, err := Helper.Fetch(name, namespace, toInit.GetUnderlyingAPIResource())
-	if err != nil {
-		return toInit, err
-	}
-	dependents, err := toInit.InitDependentResources()
-	if err != nil {
-		return toInit, err
-	}
-
-	// init status if needed
-	status := toInit.GetStatus()
-	if len(status.Conditions) == 0 {
-		status.Conditions = make([]v1beta1.DependentCondition, 0, len(dependents))
-	}
-	for _, dependent := range dependents {
-		// add watch if needed
-		config := dependent.GetConfig()
-		if config.Watched {
-			if err := callback(dependent.Owner(), config.GroupVersionKind); err != nil {
-				return toInit, err
-			}
-		}
-	}
-	toInit.SetStatus(status)
-	return toInit, err
-}
-
 func (b *BaseResource) GetDependent(predicate Predicate) (DependentResource, error) {
 	var dependent DependentResource
 	matching := 0

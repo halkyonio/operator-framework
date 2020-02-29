@@ -20,6 +20,9 @@ type PluginResource interface {
 	// DependentResources represent secondary resources that the capability might need to work (e.g. Kubernetes Role or Secret)
 	// along with the resource (if it exists) implementing the capability itself (e.g. KubeDB's Postgres).
 	GetDependentResourcesWith(owner framework.SerializableResource) []framework.DependentResource
+	// CheckValidity checks that the specified owner is valid according to the Plugin's requirements and returns the list of
+	// validation error messages
+	CheckValidity(owner framework.SerializableResource) []string
 }
 
 type SimplePluginResourceStem struct {
@@ -116,4 +119,14 @@ func (a AggregatePluginResource) GetSupportedTypes() []TypeInfo {
 func (a AggregatePluginResource) GetDependentResourcesWith(owner framework.SerializableResource) []framework.DependentResource {
 	capType := typeKey(owner.(*halkyon.Capability).Spec.Type)
 	return a.pluginResources[capType].GetDependentResourcesWith(owner)
+}
+
+func (a AggregatePluginResource) CheckValidity(owner framework.SerializableResource) []string {
+	errors := make([]string, 0, len(a.pluginResources))
+	for _, resource := range a.pluginResources {
+		if msgs := resource.CheckValidity(owner); msgs != nil {
+			errors = append(errors, msgs...)
+		}
+	}
+	return errors
 }

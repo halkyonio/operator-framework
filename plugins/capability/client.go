@@ -10,6 +10,7 @@ import (
 	framework "halkyon.io/operator-framework"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/errors"
 	"net/rpc"
 	"os"
 	"os/exec"
@@ -31,6 +32,8 @@ type Plugin interface {
 	ReadyFor(owner *halkyon.Capability) []framework.DependentResource
 	// Kill kills the RPC client and server associated with this Plugin when the host process terminates
 	Kill()
+	// CheckValidity checks that the specified capability is valid according to the Plugin's requirements
+	CheckValidity(in *halkyon.Capability) error
 }
 
 type TypeInfo struct {
@@ -102,6 +105,26 @@ func (p *PluginClient) ReadyFor(owner *halkyon.Capability) []framework.Dependent
 		depRes = append(depRes, &PluginDependentResource{client: client, gvk: rt, owner: owner})
 	}
 	return depRes
+}
+
+func (p *PluginClient) CheckValidity(in *halkyon.Capability) error {
+	client := &PluginClient{
+		client: p.client,
+		name:   p.name,
+		log:    p.log,
+		owner:  in,
+	}
+	res := []string{}
+	client.call("CheckValidity", emptyGVK, &res)
+	errNb := len(res)
+	if errNb > 0 {
+		errs := make([]error, errNb)
+		for _, msg := range res {
+			errs = append(errs, fmt.Errorf(msg))
+		}
+		return errors.NewAggregate(errs)
+	}
+	return nil
 }
 
 // NewPlugin creates the infrastructure required for the host (the operator) to be able to call the plugin binary which path is

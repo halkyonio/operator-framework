@@ -11,8 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"os"
-	"path/filepath"
 )
 
 type PluginServer interface {
@@ -25,11 +23,17 @@ type PluginServer interface {
 	NameFrom(req PluginRequest, res *string) error
 	Update(req PluginRequest, res *UpdateResponse) error
 	GetConfig(req PluginRequest, res *framework.DependentResourceConfig) error
+	CheckValidity(req PluginRequest, res *[]string) error
 }
 
 type PluginServerImpl struct {
 	capability PluginResource
 	logger     hclog.Logger
+}
+
+func (p PluginServerImpl) CheckValidity(req PluginRequest, res *[]string) error {
+	*res = p.capability.CheckValidity(req.Owner)
+	return nil
 }
 
 func (p PluginServerImpl) GetConfig(req PluginRequest, res *framework.DependentResourceConfig) error {
