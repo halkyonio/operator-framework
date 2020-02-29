@@ -29,6 +29,7 @@ type PluginServer interface {
 
 type PluginServerImpl struct {
 	capability PluginResource
+	logger     hclog.Logger
 }
 
 func (p PluginServerImpl) GetConfig(req PluginRequest, res *framework.DependentResourceConfig) error {
@@ -52,7 +53,7 @@ func StartPluginServerFor(resources ...PluginResource) {
 	}
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: Handshake,
-		Plugins:         map[string]plugin.Plugin{pluginName: &GoPluginPlugin{Delegate: p}},
+		Plugins:         map[string]plugin.Plugin{pluginName: &GoPluginPlugin{Delegate: p, Logger: logger}},
 		Logger:          logger,
 	})
 }

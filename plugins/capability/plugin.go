@@ -1,6 +1,7 @@
 package capability
 
 import (
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"net/rpc"
 	"os"
@@ -12,10 +13,11 @@ var _ plugin.Plugin = &GoPluginPlugin{}
 type GoPluginPlugin struct {
 	name     string
 	Delegate PluginResource
+	Logger   hclog.Logger
 }
 
 func (p *GoPluginPlugin) Server(b *plugin.MuxBroker) (interface{}, error) {
-	return &PluginServerImpl{capability: p.Delegate}, nil
+	return &PluginServerImpl{capability: p.Delegate, logger: p.Logger}, nil
 }
 
 func (p *GoPluginPlugin) Client(b *plugin.MuxBroker, client *rpc.Client) (interface{}, error) {
