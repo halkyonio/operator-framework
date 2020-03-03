@@ -58,7 +58,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	// Initialize with default values if needed
-	if resource.Init() {
+	if resource.ProvideDefaultValues() {
 		if e := Helper.Client.Update(context.Background(), resource.GetUnderlyingAPIResource()); e != nil {
 			b.logger().Error(e, fmt.Sprintf("failed to update '%s' %s", resource.GetName(), typeName))
 		}

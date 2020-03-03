@@ -14,7 +14,7 @@ type Resource interface {
 	NeedsRequeue() bool
 	ComputeStatus() (needsUpdate bool)
 	CheckValidity() error
-	Init() bool
+	ProvideDefaultValues() bool
 	GetUnderlyingAPIResource() SerializableResource
 	PrimaryResourceType() runtime.Object
 	Delete() error
