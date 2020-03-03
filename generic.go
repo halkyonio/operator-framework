@@ -44,18 +44,15 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Return and don't create
-			if resource.ShouldDelete() {
-				b.logger().Info("'" + request.Name + "' " + typeName + " is marked for deletion. Running clean-up.")
-				err := resource.Delete()
-				return reconcile.Result{Requeue: resource.NeedsRequeue()}, err
-			}
-			return reconcile.Result{}, nil
+			b.logger().Info("'" + request.Name + "' " + typeName + " is marked for deletion. Running clean-up.")
+			err := resource.Delete()
+			return reconcile.Result{}, err
 		}
 		// Error reading the object - create the request.
 		b.logger().Error(err, "failed to initialize '"+request.Name+"' "+typeName)
 		if resource != nil {
 			err = UpdateStatusIfNeeded(resource, err)
-			return reconcile.Result{Requeue: false}, nil
+			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}

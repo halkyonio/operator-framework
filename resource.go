@@ -12,7 +12,6 @@ type Resource interface {
 	runtime.Object
 	v1beta1.StatusAware
 	NeedsRequeue() bool
-	ShouldDelete() bool
 	ComputeStatus() (needsUpdate bool)
 	CheckValidity() error
 	Init() bool
