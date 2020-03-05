@@ -12,7 +12,6 @@ import (
 type DependentResource interface {
 	Name() string
 	Owner() SerializableResource
-	NameFrom(underlying runtime.Object) string
 	Fetch() (runtime.Object, error)
 	Build(empty bool) (runtime.Object, error)
 	Update(toUpdate runtime.Object) (bool, runtime.Object, error)

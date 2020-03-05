@@ -20,7 +20,6 @@ type PluginServer interface {
 	GetTypes(req PluginRequest, res *[]TypeInfo) error
 	GetCondition(req PluginRequest, res *v1beta1.DependentCondition) error
 	Name(req PluginRequest, res *string) error
-	NameFrom(req PluginRequest, res *string) error
 	Update(req PluginRequest, res *UpdateResponse) error
 	GetConfig(req PluginRequest, res *framework.DependentResourceConfig) error
 	CheckValidity(req PluginRequest, res *[]string) error
@@ -101,12 +100,6 @@ func (p PluginServerImpl) GetCondition(req PluginRequest, res *v1beta1.Dependent
 func (p PluginServerImpl) Name(req PluginRequest, res *string) error {
 	resource := p.dependentResourceFor(req)
 	*res = resource.Name()
-	return nil
-}
-
-func (p PluginServerImpl) NameFrom(req PluginRequest, res *string) error {
-	resource := p.dependentResourceFor(req)
-	*res = resource.NameFrom(requestedArg(resource, req))
 	return nil
 }
 
