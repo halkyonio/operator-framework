@@ -37,6 +37,10 @@ func NewFalse() *bool {
 }
 
 func GetObjectName(object runtime.Object) string {
+	name := object.GetObjectKind().GroupVersionKind().Kind
+	if len(name) > 0 {
+		return name
+	}
 	t := reflect.TypeOf(object)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
