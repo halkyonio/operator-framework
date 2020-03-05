@@ -7,13 +7,8 @@ import (
 )
 
 type BaseResource struct {
-	dependents          []DependentResource
-	requeue             bool
-	primaryResourceType runtime.Object
-}
-
-func (b *BaseResource) PrimaryResourceType() runtime.Object {
-	return b.primaryResourceType
+	dependents []DependentResource
+	requeue    bool
 }
 
 func (b *BaseResource) SetNeedsRequeue(requeue bool) {
@@ -24,8 +19,8 @@ func (b *BaseResource) NeedsRequeue() bool {
 	return b.requeue
 }
 
-func NewHasDependents(primary runtime.Object) *BaseResource {
-	return &BaseResource{dependents: make([]DependentResource, 0, 15), primaryResourceType: primary}
+func NewHasDependents() *BaseResource {
+	return &BaseResource{dependents: make([]DependentResource, 0, 15)}
 }
 
 func (b *BaseResource) CreateOrUpdateDependents() error {
