@@ -1,0 +1,263 @@
+= Halkyon operator framework
+
+This project is focused on extracting code that, while somewhat targeted at the https://github.com/halkyonio/operator[Halkyon]
+operator, could be used in other operator projects. More specifically, parts of the code is specific to Halkyon because the
+priority hasn't been on making it fully independent but most of the code is generic and it shouldn't be too complex to extract
+the Halkyon-specific parts out completely.
+
+== Overview
+
+This framework is meant to ease the development of operators. The base premise is to abstract away the low-level concerns of how
+custom resources are reconciled so that users can focus on the actual logic of what the operator is trying to achieve. To
+that end, this framework introduces two core concepts: `Resource` and `DependentResource`.
+
+=== Core concepts
+
+A `Resource` (also called "primary" resource) represents a custom resource that the operator manages. This is one specificity of
+this framework: it assumes that you deal with one or several custom resources. A `DependentResource`, on the other hand,
+represents any resource that is needed to realize the desired state described by a `Resource` that is under the operator's
+control.
+
+Since this framework was developed while working on Halkyon, we will use Halkyon to illustrate the concepts. For example, as
+Halkyon defines two custom resources `Component` and `Capability`, each of these are implemented as a `Resource`. While the
+`Component` resource is rather simple, it is actually realized by the combination of several
+Kubernetes resources on the cluster: `ServiceAccount`, `Deployment`, `Service`, `PVC`, `Ingress`, etc… Each of these resources
+are defined as "dependent" (or "secondary") resources to the `Component` `Resource`. Note also that a dependent resource can
+also be another custom resource: this is actually the case for the `Component` resource which can have `Capability` dependents.
+
+[source,go]
+.`Resource` interface
+----
+// Resource is the core interface allowing users to define the behavior of primary resources. A Resource is primarily
+// responsible for managing the set of its associated DependentResources and taking the appropriate actions based on their status
+type Resource interface {
+	v1.Object
+	runtime.Object
+	v1beta1.StatusAware
+	// NeedsRequeue determines whether this Resource needs to be requeued in the reconcile loop
+	NeedsRequeue() bool
+	// ComputeStatus computes the status of this Resource based on the cluster state. Default implementation uses the
+	// aggregated status of this Resource's dependents' condition. Return value indicates whether the status of the Resource has
+	// changed as the result of the computation and therefore the needs to be updated on the cluster.
+	ComputeStatus() (needsUpdate bool)
+	// CheckValidity checks whether this Resource is valid according to its semantics. Note that some/all of this functionality
+	// might be implemented as a validation webhook instead.
+	CheckValidity() error
+	// ProvideDefaultValues initializes any potentially missing optional values to appropriate defaults
+	ProvideDefaultValues() bool
+	// GetUnderlyingAPIResource returns the object implementing the custom resource this Resource represents as a
+	// SerializableResource
+	GetUnderlyingAPIResource() SerializableResource
+	// Delete performs any operation that might be needed when a reconcile request occurs for a Resource that does not exist on
+	// the cluster anymore
+	Delete() error
+	// CreateOrUpdate creates or updates all dependent resources associated with this Resource depending on the state of the
+	//cluster
+	CreateOrUpdate() error
+	// NewEmpty returns a new empty instance of this Resource so that it can be populated during the reconcile loop. Note that
+	// NewEmpty must return a Resource with an initialized GroupVersionKind so that calls to the GroupVersionKind method is
+	// guaranteed to return a non-empty GroupVersionKind
+	NewEmpty() Resource
+	// InitDependentResources returns the array of DependentResources that are associated with this Resource.
+	InitDependentResources() ([]DependentResource, error)
+}
+----
+
+A `Resource` is therefore associated to a set of `DependentResource` which it needs to be realized on the cluster. Some of these
+dependent resources have a lifetime that is tied to their associated primary resource's while others don't. Similarly, the
+operator might need to be informed of changes to the dependent resources to update the state / status of the primary resource.
+Dependent resources might need to be created or updated during the life time of the primary resource. The framework will take
+the appropriate action based on the `DependentResourceConfig` associated with a `DependentResource`.
+
+[source,go]
+.`DependentResource` interface
+----
+// DependentResource represents any resource a Resource requires to be realized on the cluster.
+type DependentResource interface {
+	// Name returns the name used to identify this DependentResource on the cluster, given the parent Resource's namespace
+	Name() string
+	// Owner returns the SerializableResource owning this DependentResource. For all intent and purposes, this owner is a
+	// Resource, reduced to its strictly needed information so that it can be serialized and sent over the network to plugins.
+	Owner() SerializableResource
+	// Fetch retrieves the object associated with this DependentResource from the cluster
+	Fetch() (runtime.Object, error)
+	// Build generates the runtime.Object needed to store the representation of this DependentResource on the cluster. For
+	// example, a DependentResource representing a Kubernetes secret would return a Secret object as defined by the Kubernetes
+	// API.
+	Build(empty bool) (runtime.Object, error)
+	// Update applies any needed changes to the specified runtime.Object and returns an updated version which calling code needs
+	// to use since the return object might be different from the input one. The first return value is a bool indicating whether
+	// or not the input object was changed in the process so that the framework can know whether to store the updated value.
+	Update(toUpdate runtime.Object) (bool, runtime.Object, error)
+	// GetCondition returns a DependentCondition object describing the condition of this DependentResource based either on the
+	// state of the specified underlying runtime.Object (i.e. the Kubernetes resource) associated with this DependentResource or
+	// the given error which might have occurred while processing this DependentResource.
+	GetCondition(underlying runtime.Object, err error) *v1beta1.DependentCondition
+	// GetConfig retrieves the configuration associated with this DependentResource, configuration describing how the framework
+	// needs to handle this DependentResource when it comes to watching it for changes, updating it, etc.
+	GetConfig() DependentResourceConfig
+}
+----
+
+An important part of what an operator does is computing the status of a given resource and decide what, if anything, needs to be
+done to reconcile the cluster state with the state desired by the user, as expressed by the custom resources it handles. This
+framework relies on the concept of `DependentCondition` which allows each dependent resource to report its status, which in turn
+allows the associated primary resource to compute an aggregated status. While the conditions rely on basic status such as
+`Ready`, `Failed` or `Pending`, it is possible for a dependent resource to define a more specific status.
+
+Rooted in these concepts, the framework provides default, generic behaviors enabling users to quickly get running while still
+providing customization point so that some parts of the behavior can be adapted as needed.
+
+=== Creating a new operator using the framework
+
+**TODO**
+
+=== Generic and base implementations
+
+Recognizing that there are lots of commonality in how the core interfaces might be implemented, the framework also offers base
+implementations that can be embedded in your own to make it even easier to provide support for a primary resource and its
+dependents.
+
+`BaseResource` can be used as a starting point for a `Resource` interface implementation.
+
+**TODO**
+
+== Plugin architecture overview
+
+Part of what makes Halkyon interesting is the capability system.
+While the capability concept is powerful, it only makes sense if capabilities can be added to Halkyon without requiring to modify its core.
+The goal of this plugin architecture is to make it as easy as possible to extend Halkyon by adding new capabilities as plugins.
+This has also the added advantage of being able to decouple the releases of the operator and that of its plugins, which can evolve separately (as long as API compatibility is maintained, of course).
+
+The plugin architecture relies at its core on https://github.com/hashicorp/go-plugin[Hashicorp's go-plugin].
+This, in turns, means that Halkyon plugins run as separate processes of the operator, relying on RPC communication with the core.
+A plugin, therefore, consists in two parts:
+
+- a client that runs in the operator process, controlling the lifecycle of and interacting with the second part of the plugin,
+- a server running in a separate process, implementing the plugin behavior.
+
+However, from a user's point of view, much, if not all, of that complexity is hidden.
+We also made a point of hiding that complexity for plugins implementors so that it is as easy as possible to create new plugins, without having to worry about the RPC infrastructure.
+Each plugin is compiled into a binary and needs to follow some conventions in order to be automatically discoverable and downloadable by the operator.
+
+NOTE: While the use of RPC makes it technically possible to write plugins using different programming languages, we focused our efforts (and will only document) the use case of a Go-based plugin.
+
+=== Client
+
+The operator is only superficially aware of plugins: it loads them from a local `plugins` directory where each file is assumed to be a capability plugin which path is passed to the `NewPlugin` function.
+See <<Using plugins in Halkyon>> for more details.
+
+This function sets the RPC plumbing, in particular, starts the plugin process, opens a client to it and registers the plugin so that the operator knows which capabilities it provides.
+All this is executed when the operator starts in its `main` function.
+From there, the operator is only aware of the plugin when it attempts to create a capability: based on the requested category and type combination, the operator will look for a plugin supporting such a pair to initialize the dependents of the capability object.
+If a plugin is found, the operator proceeds transparently interacting with the plugin via the capability object.
+If no plugin is found to support the category and type of the desired capability, the capability is set in error until a plugin can be provided (at this time, after an operator restart) to support it.
+
+Here is the `Plugin` interface that the operator interacts with, though technically, it only ever calls `GetTypes`
+and `ReadyFor` directly:
+
+[source,go]
+----
+// Plugin is the operator-facing interface that can be interacted with in Halkyon
+type Plugin interface {
+	// Name returns the name of this Plugin
+	Name() string
+	// GetCategory retrieves the CapabilityCategory supported by this Plugin
+	GetCategory() halkyon.CapabilityCategory
+	// GetTypes returns TypeInfo providing information about CapabilityTypes this Plugin supports
+	GetTypes() []TypeInfo
+	// ReadyFor initializes the DependentResources needed by the given Capability and readies the Plugin for requests by the host.
+	// Note that the order in which the DependentResources are returned is significant and the operator will process them in the
+	// specified order. This is needed because some capabilities might require some dependent resources to be present before
+	// processing others.
+	ReadyFor(owner *halkyon.Capability) []framework.DependentResource
+	// Kill kills the RPC client and server associated with this Plugin when the host process terminates
+	Kill()
+}
+----
+
+The client takes care of marshalling requests to the plugin in the appropriate format and calls the associated server without the operator being none the wiser.
+
+NOTE: Plugin implementors must not implement this interface directly.
+See <<Plugin implementation>> for more details.
+
+=== Server
+
+Here is the server interface:
+
+[source,go]
+----
+type PluginServer interface {
+	Build(req PluginRequest, res *BuildResponse) error
+	GetCategory(req PluginRequest, res *halkyon.CapabilityCategory) error
+	GetDependentResourceTypes(req PluginRequest, res *[]schema.GroupVersionKind) error
+	GetTypes(req PluginRequest, res *[]TypeInfo) error
+	IsReady(req PluginRequest, res *IsReadyResponse) error
+	Name(req PluginRequest, res *string) error
+	NameFrom(req PluginRequest, res *string) error
+	Update(req PluginRequest, res *UpdateResponse) error
+	GetConfig(req PluginRequest, res *framework.DependentResourceConfig) error
+}
+----
+
+In typical RPC fashion, at least when it comes to Go's implementation, the server exposes a set of functions which all follow the `<function name>(<input parameter>, <pointer to a response holder>) error` format, which is less than natural to interact with.
+This why we make sure that plugin implementors don't need to deal with this and we only show this interface for reference purposes, rejoice! :smile:
+
+=== Plugin implementation
+
+While the RPC part of the infrastructure is abstracted away but the Halkyon plugins architecture, plugin implementors still need to write some code in order to implement the capabilities they want to support.
+This behavior is encapsulated in one single interface:
+
+[source,go]
+----
+// PluginResource gathers behavior that plugin implementors are expected to provide to the plugins architecture
+type PluginResource interface {
+	// GetSupportedCategory returns the CapabilityCategory that this plugin supports
+	GetSupportedCategory() halkyon.CapabilityCategory
+	// GetSupportedTypes returns the list of supported CapabilityTypes along with associated versions when they exist.
+	// Note that, while a plugin can only support one CapabilityCategory (e.g. "database"), a plugin can provide support for
+	// multiple CapabilityTypes (e.g. "postgresql", "mysql", etc.) within the confine of the specified category.
+	GetSupportedTypes() []TypeInfo
+	// GetDependentResourcesWith returns an ordered list of DependentResources initialized with the specified owner.
+	// DependentResources represent secondary resources that the capability might need to work (e.g. Kubernetes Role or Secret)
+	// along with the resource (if it exists) implementing the capability itself (e.g. KubeDB's Postgres).
+	GetDependentResourcesWith(owner v1beta1.HalkyonResource) []framework.DependentResource
+}
+----
+
+As you can see this closely mirrors the `Plugin` interface that the operator can interact with but is strictly focused on providing the required behavior with as simple an interface as possible.
+
+In order to implement a plugin, you will need to create a go project importing this project and create a main function similar to the following one:
+
+[source,go]
+----
+package main
+
+import (
+	plugins "halkyon.io/plugins/capability"
+)
+
+func main() {
+	var p plugins.PluginResource = ... // create an instance of your PluginResource implementation
+    plugins.StartPluginServerFor(p) // register your server and start it
+}
+----
+
+You, of course, need to provide your own `PluginResource` implementation.
+
+=== Example
+
+A full-featured example can be seen at https://github.com/halkyonio/kubedb-capability
+
+== Using plugins in Halkyon
+
+Halkyon will attempt to load every file it finds in its local `plugins` directory as a plugin.
+These files need to be binaries that can be run on the platform you're running the operator on.
+As a convenience, it is possible to pass a comma-separated list of plugins to automatically download from github repositories to the operator.
+This is accomplished using the `HALKYON_PLUGINS`
+environment variable (which can, of course, be provided via a ConfigMap).
+Each plugin in the list is identified by a string following the `<github org>/<repository name>@<release name>`.
+When encountering such a plugin identifier, Halkyon will attempt to download a file found at: `https://github.com/<github org>/releases/download/<repository name>/halkyon_plugin_<target OS>.tar.gz`
+where `<target OS>` corresponds to the value reported by by the Go runtime under the `runtime.GOOS` value in the running operator.
+A good way to make sure that your plugin is downloadable by Halkyon is to use https://goreleaser.com/[GoReleaser] combined with GitHub actions.
+See https://github.com/halkyonio/kubedb-capability for more details.

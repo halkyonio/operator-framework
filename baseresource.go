@@ -6,6 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// BaseResource provides some base behavior that can be reused when implementing the Resource interface
 type BaseResource struct {
 	dependents []DependentResource
 	requeue    bool
