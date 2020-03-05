@@ -19,7 +19,7 @@ func (b *BaseResource) NeedsRequeue() bool {
 	return b.requeue
 }
 
-func NewHasDependents() *BaseResource {
+func NewBaseResource() *BaseResource {
 	return &BaseResource{dependents: make([]DependentResource, 0, 15)}
 }
 
