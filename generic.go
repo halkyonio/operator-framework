@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -40,7 +39,7 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	resource.SetName(request.Name)
 	resource.SetNamespace(request.Namespace)
 	_, err := Helper.Fetch(request.Name, request.Namespace, resource.GetUnderlyingAPIResource())
-	typeName := util.GetObjectName(b.resource.PrimaryResourceType())
+	typeName := util.GetObjectName(b.resource)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Return and don't create
@@ -140,14 +139,7 @@ func UpdateStatusIfNeeded(instance Resource, err error) error {
 }
 
 func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
-	resourceType := resource.PrimaryResourceType()
-
-	// initialize the GVK for this resource type
-	gvk, err := apiutil.GVKForObject(resourceType, mgr.GetScheme())
-	if err != nil {
-		return err
-	}
-	resourceType.GetObjectKind().SetGroupVersionKind(gvk)
+	resourceType := resource.GetUnderlyingAPIResource()
 
 	// Create a new controller
 	controllerName := controllerNameFor(resourceType)
@@ -204,10 +196,10 @@ func createCallbackFor(c controller.Controller) WatchCallback {
 }
 
 func getCallbackFor(resource Resource) WatchCallback {
-	return callbacks[controllerNameFor(resource.PrimaryResourceType())]
+	return callbacks[controllerNameFor(resource.GetUnderlyingAPIResource())]
 }
 
-func controllerNameFor(resource runtime.Object) string {
+func controllerNameFor(resource SerializableResource) string {
 	return strings.ToLower(util.GetObjectName(resource)) + "-controller"
 }
 

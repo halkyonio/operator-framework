@@ -16,7 +16,6 @@ type Resource interface {
 	CheckValidity() error
 	ProvideDefaultValues() bool
 	GetUnderlyingAPIResource() SerializableResource
-	PrimaryResourceType() runtime.Object
 	Delete() error
 	CreateOrUpdate() error
 	NewEmpty() Resource
