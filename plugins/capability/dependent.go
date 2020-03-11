@@ -32,12 +32,6 @@ func (p PluginDependentResource) Owner() framework.SerializableResource {
 	return p.owner
 }
 
-func (p PluginDependentResource) NameFrom(underlying runtime.Object) string {
-	res := ""
-	p.client.call("NameFrom", p.gvk, &res, underlying)
-	return res
-}
-
 func (p PluginDependentResource) Fetch() (runtime.Object, error) {
 	into := framework.CreateEmptyUnstructured(p.GetConfig().GroupVersionKind)
 	if err := framework.Helper.Client.Get(context.TODO(), types.NamespacedName{Name: p.Name(), Namespace: p.owner.GetNamespace()}, into); err != nil {

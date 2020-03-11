@@ -23,10 +23,6 @@ type Secret struct {
 	Delegate NeedsSecret
 }
 
-func (res Secret) NameFrom(underlying runtime.Object) string {
-	return DefaultNameFrom(res, underlying)
-}
-
 func (res Secret) Fetch() (runtime.Object, error) {
 	return DefaultFetcher(res)
 }

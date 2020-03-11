@@ -19,10 +19,6 @@ type Role struct {
 	Delegate NeedsRole
 }
 
-func (res Role) NameFrom(underlying runtime.Object) string {
-	return DefaultNameFrom(res, underlying)
-}
-
 func (res Role) Fetch() (runtime.Object, error) {
 	return DefaultFetcher(res)
 }

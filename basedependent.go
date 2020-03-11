@@ -78,10 +78,6 @@ func DefaultCustomizedGetConditionFor(dep DependentResource, err error, underlyi
 	return d
 }
 
-func DefaultNameFrom(dep DependentResource, _ runtime.Object) string {
-	return dep.Name()
-}
-
 func (b BaseDependentResource) GetConfig() DependentResourceConfig {
 	return b.config
 }

@@ -21,10 +21,6 @@ type RoleBinding struct {
 	Delegate NeedsRoleBinding
 }
 
-func (res RoleBinding) NameFrom(underlying runtime.Object) string {
-	return DefaultNameFrom(res, underlying)
-}
-
 func (res RoleBinding) Fetch() (runtime.Object, error) {
 	return DefaultFetcher(res)
 }
