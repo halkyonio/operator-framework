@@ -79,5 +79,9 @@ func (res Secret) Name() string {
 }
 
 func DefaultSecretNameFor(secretOwner NeedsSecret) string {
-	return strings.ToLower(secretOwner.Owner().GetName()) + "-config"
+	return DefaultSecretNameFrom(secretOwner.Owner())
+}
+
+func DefaultSecretNameFrom(owner metav1.Object) string {
+	return strings.ToLower(owner.GetName()) + "-config"
 }
