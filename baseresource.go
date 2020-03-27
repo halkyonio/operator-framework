@@ -26,6 +26,7 @@ func NewBaseResource(statusAware v1beta1.StatusAware) *BaseResource {
 	return &BaseResource{dependents: make([]DependentResource, 0, 15), StatusAware: statusAware}
 }
 
+// CreateOrUpdateDependents calls CreateOrUpdate on the dependents of the associated BaseResource
 func (b *BaseResource) CreateOrUpdateDependents() error {
 	for _, dep := range b.dependents {
 		if e := CreateOrUpdate(dep); e != nil {
@@ -36,6 +37,8 @@ func (b *BaseResource) CreateOrUpdateDependents() error {
 	return nil
 }
 
+// GetDependent retrieves the DependentResource associated with the specified predicate or returns an error if no such
+// DependentResource exists or, conversely, if several DependentResources match the given predicate.
 func (b *BaseResource) GetDependent(predicate Predicate) (DependentResource, error) {
 	var dependent DependentResource
 	matching := 0
@@ -60,6 +63,8 @@ func (b *BaseResource) GetDependent(predicate Predicate) (DependentResource, err
 	}
 }
 
+// FetchUpdatedDependent fetches the latest cluster state of the Object associated with the DependentResource identified by the
+// specified predicate. As it calls GetDependent, it returns the same error conditions.
 func (b *BaseResource) FetchUpdatedDependent(predicate Predicate) (runtime.Object, error) {
 	dependent, err := b.GetDependent(predicate)
 	if err != nil {
@@ -80,6 +85,8 @@ func (b *BaseResource) AddDependentResource(resources ...DependentResource) []De
 	return b.dependents
 }
 
+// ComputeStatus computes the aggregated status of this BaseResource based on the status of each DependentResource that declares
+// that it needs to be checked for readiness.
 func (b *BaseResource) ComputeStatus() (needsUpdate bool) {
 	// todo: compute whether we need to update the resource
 	status := b.GetStatus()
@@ -97,6 +104,8 @@ func (b *BaseResource) ComputeStatus() (needsUpdate bool) {
 	return
 }
 
+// DefaultErrorHandler updates the specified status based on the given error if needed, returning whether the status was updated
+// along with the updated status to be used by calling code.
 func DefaultErrorHandler(status v1beta1.Status, err error) (updated bool, updatedStatus v1beta1.Status) {
 	errMsg := err.Error()
 	if "Failed" != status.Reason || errMsg != status.Message {
