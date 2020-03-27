@@ -8,6 +8,7 @@ import (
 
 // BaseResource provides some base behavior that can be reused when implementing the Resource interface
 type BaseResource struct {
+	v1beta1.StatusAware
 	dependents []DependentResource
 	requeue    bool
 }
@@ -20,8 +21,9 @@ func (b *BaseResource) NeedsRequeue() bool {
 	return b.requeue
 }
 
-func NewBaseResource() *BaseResource {
-	return &BaseResource{dependents: make([]DependentResource, 0, 15)}
+// NewBaseResource creates a new BaseResource delegating its status to the specified StatusAware instance
+func NewBaseResource(statusAware v1beta1.StatusAware) *BaseResource {
+	return &BaseResource{dependents: make([]DependentResource, 0, 15), StatusAware: statusAware}
 }
 
 func (b *BaseResource) CreateOrUpdateDependents() error {
@@ -78,9 +80,9 @@ func (b *BaseResource) AddDependentResource(resources ...DependentResource) []De
 	return b.dependents
 }
 
-func (b *BaseResource) ComputeStatus(current Resource) (needsUpdate bool) {
+func (b *BaseResource) ComputeStatus() (needsUpdate bool) {
 	// todo: compute whether we need to update the resource
-	status := current.GetStatus()
+	status := b.GetStatus()
 	for _, dependent := range b.dependents {
 		config := dependent.GetConfig()
 		if config.CheckedForReadiness {
@@ -90,7 +92,7 @@ func (b *BaseResource) ComputeStatus(current Resource) (needsUpdate bool) {
 		}
 	}
 	if needsUpdate {
-		current.SetStatus(status)
+		b.SetStatus(status)
 	}
 	return
 }
