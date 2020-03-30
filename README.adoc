@@ -1,29 +1,23 @@
 = Halkyon operator framework
 
-This project is focused on extracting code that, while somewhat targeted at the https://github.com/halkyonio/operator[Halkyon]
-operator, could be used in other operator projects. More specifically, parts of the code is specific to Halkyon because the
-priority hasn't been on making it fully independent but most of the code is generic and it shouldn't be too complex to extract
-the Halkyon-specific parts out completely.
+This project focuses on extracting code that, while somewhat targeted at the https://github.com/halkyonio/operator[Halkyon]
+operator, could be used in other operator projects.
+More specifically, parts of the code is specific to Halkyon because the priority hasn't been on making it fully independent, but most of the code is generic, and it shouldn't be too complex to extract the Halkyon-specific parts out completely.
 
 == Overview
 
-This framework is meant to ease the development of operators. The base premise is to abstract away the low-level concerns of how
-custom resources are reconciled so that users can focus on the actual logic of what the operator is trying to achieve. To
-that end, this framework introduces two core concepts: `Resource` and `DependentResource`.
+We designed this framework to ease the development of operators.
+The base premise is to abstract away the low-level concerns of how to reconcile the state of custom resources.
+Users can thus focus on the actual logic of what the operator is trying to achieve.
+
+Since we developed this framework while working on Halkyon, we will use Halkyon to illustrate the concepts.
 
 === Core concepts
 
-A `Resource` (also called "primary" resource) represents a custom resource that the operator manages. This is one specificity of
-this framework: it assumes that you deal with one or several custom resources. A `DependentResource`, on the other hand,
-represents any resource that is needed to realize the desired state described by a `Resource` that is under the operator's
-control.
+This framework introduces two core concepts, represented by the `Resource` and `DependentResource` interfaces that operator creators must implement to use this framework/
 
-Since this framework was developed while working on Halkyon, we will use Halkyon to illustrate the concepts. For example, as
-Halkyon defines two custom resources `Component` and `Capability`, each of these are implemented as a `Resource`. While the
-`Component` resource is rather simple, it is actually realized by the combination of several
-Kubernetes resources on the cluster: `ServiceAccount`, `Deployment`, `Service`, `PVC`, `Ingress`, etc… Each of these resources
-are defined as "dependent" (or "secondary") resources to the `Component` `Resource`. Note also that a dependent resource can
-also be another custom resource: this is actually the case for the `Component` resource which can have `Capability` dependents.
+A `Resource` (also called "primary" resource) represents a custom resource that the operator manages.
+This is one specificity of this framework: it assumes that you deal with one or several custom resources.
 
 [source,go]
 .`Resource` interface
@@ -63,11 +57,9 @@ type Resource interface {
 }
 ----
 
-A `Resource` is therefore associated to a set of `DependentResource` which it needs to be realized on the cluster. Some of these
-dependent resources have a lifetime that is tied to their associated primary resource's while others don't. Similarly, the
-operator might need to be informed of changes to the dependent resources to update the state / status of the primary resource.
-Dependent resources might need to be created or updated during the life time of the primary resource. The framework will take
-the appropriate action based on the `DependentResourceConfig` associated with a `DependentResource`.
+A `DependentResource`, on the other hand, represents any resource that is needed to realize the desired state as described by a
+`Resource` under the operator's control.
+A `Resource` is therefore associated to a set of `DependentResource` which it needs to be realized on the cluster.
 
 [source,go]
 .`DependentResource` interface
@@ -99,26 +91,190 @@ type DependentResource interface {
 }
 ----
 
-An important part of what an operator does is computing the status of a given resource and decide what, if anything, needs to be
-done to reconcile the cluster state with the state desired by the user, as expressed by the custom resources it handles. This
-framework relies on the concept of `DependentCondition` which allows each dependent resource to report its status, which in turn
-allows the associated primary resource to compute an aggregated status. While the conditions rely on basic status such as
+For example, as Halkyon defines two custom resources `Component` and `Capability`, each of these are implemented as a `Resource`.
+While the `Component` resource is rather simple, it is actually realized by the combination of several Kubernetes resources on the cluster: `ServiceAccount`, `Deployment`, `Service`, `PVC`, `Ingress`, etc… Each of these resources is defined as "dependent" (or "secondary") resources to the `Component` `Resource`.
+Note also that a dependent resource can also be another custom resource: this is actually the case for the `Component` resource which can have `Capability` dependents.
+
+An important part of what an operator does is computing the status of a given resource and decide what, if anything, needs to be done to reconcile the cluster state with the state desired by the user, as expressed by the custom resources it handles.
+This framework relies on the concept of `DependentCondition` which allows each dependent resource to report its status, which in turn allows the associated primary resource to compute an aggregated status.
+While the conditions rely on basic status such as
 `Ready`, `Failed` or `Pending`, it is possible for a dependent resource to define a more specific status.
 
-Rooted in these concepts, the framework provides default, generic behaviors enabling users to quickly get running while still
-providing customization point so that some parts of the behavior can be adapted as needed.
+[source,go]
+.`DependentCondition` struct
+----
+// DependentCondition contains details for the current condition of the associated DependentResource.
+type DependentCondition struct {
+	// Type of the condition.
+	Type DependentConditionType `json:"type"`
+	// Type of the dependent associated with the condition.
+	DependentType schema.GroupVersionKind `json:"dependentType"`
+	// Name of the dependent associated with the condition.
+	DependentName string `json:"dependentName"`
+	// Records the last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime v1.Time `json:"lastTransitionTime,omitempty"`
+	// Unique, one-word, CamelCase reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+	// Human-readable message indicating details about last transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+	// Additional information that the condition wishes to convey/record as name-value pairs.
+	// +optional
+	Attributes []NameValuePair `json:"attributes,omitempty"`
+}
+----
 
-=== Creating a new operator using the framework
+Some of these dependent resources have a lifetime that is tied to their associated primary resource's while others don't.
+Similarly, the operator might need to be informed of changes to the dependent resources to update the state / status of the primary resource.
+Dependent resources might need to be created or updated during the life time of the primary resource.
+The framework will take the appropriate action based on the `DependentResourceConfig` associated with a `DependentResource`.
 
-**TODO**
+[source,go]
+.`DependentResourceConfig` struct
+----
+// DependentResourceConfig represents the configuration associated with a DependentResource. The framework takes action based on
+// this configuration, for example, on whether the associated DependentResource is checked for readiness when assessing the
+// status of its associated Resource or whether it needs to be watched, created or updated… The defaultConfig var records the
+// default values for these who might be omitted.
+type DependentResourceConfig struct {
+	// Watched determines whether the operator should be notified when the associated DependentResource's state changes.
+	// Defaults to true.
+	Watched bool
+	// Owned determines whether the Resource associated with the associated DependentResource owns this DependentResource,
+	// meaning that the lifecycle of the DependentResource is tied to that of its Resource (e.g. the DependentResource is
+	// deleted when the parent Resource is deleted). Defaults to true.
+	Owned bool
+	// Created determines whether the associated DependentResource should be created if it doesn't already exist. Generally,
+	// this should be true, however, in some cases such as when a DependentResource is actually another Resource, i.e.
+	// something that can (and maybe needs to) be created by a user, this should be set to false indicating that the operator
+	// should wait for the associated DependentResource to be created, independently. Defaults to true.
+	Created bool
+	// Updated determines whether the associated DependentResource defines custom behavior to be applied when the resource
+	// already exists on the cluster. Defaults to false.
+	Updated bool
+	// CheckedForReadiness determines whether the associated DependentResource should participate in the overall status of the
+	// parent Resource, in particular when it comes to checking whether the Resource is considered ready to be used. Defaults
+	// to false.
+	CheckedForReadiness bool
+	// GroupVersionKind records the GroupVersionKind of the associated DependentResource so that it can be used with
+	// Unstructured for example.
+	GroupVersionKind schema.GroupVersionKind
+	// TypeName records the DependentResource's type to be displayed in messages / logs, this defaults to its associated Kind
+	// but, in some instances, e.g. for Capabilities part of Component's contract, it might be needed to be overridden to be
+	// more precise / specific.
+	TypeName string
+}
+----
+
+Rooted in these concepts, the framework provides default, generic behaviors enabling users to quickly get running while still providing customization point so that some parts of the behavior can be adapted as needed.
 
 === Generic and base implementations
 
-Recognizing that there are lots of commonality in how the core interfaces might be implemented, the framework also offers base
-implementations that can be embedded in your own to make it even easier to provide support for a primary resource and its
-dependents.
+Recognizing that there are lots of commonality in how the core interfaces might be implemented, the framework also offers base implementations that can be embedded in your own to make it even easier to provide support for a primary resource and its dependents.
 
 `BaseResource` can be used as a starting point for a `Resource` interface implementation.
+
+Here's how Halkyon uses `BaseResource` to bootstrap the implementation of the `Resource` interface for the code that is responsible for handling Halkyon Component (defined by the Halkyon API):
+
+[source,go]
+.`Component` reuse of `BaseResource`
+----
+package component
+
+import (
+	halkyon "halkyon.io/api/component/v1beta1"
+	"halkyon.io/operator-framework"
+)
+
+// blank assignment to check that Component implements Resource
+var _ framework.Resource = &Component{}
+
+// Component implements the Resource interface to handle behavior tied to the state of Halkyon's Component CR.
+type Component struct {
+	*halkyon.Component
+	*framework.BaseResource
+}
+
+// NewComponent creates a new Component instance, reusing BaseResource as the foundation for its behavior
+func NewComponent() *Component {
+	c := &Component{Component: &halkyon.Component{}}
+	// initialize the BaseResource, delegating its status handling to our newly created instance as StatusAware instance
+	c.BaseResource = framework.NewBaseResource(c)
+	c.Component.SetGroupVersionKind(c.Component.GetGroupVersionKind()) // make sure that GVK is set on the runtime object
+	return c
+}
+----
+
+Once this is set up, `Component` can reuse behavior from `BaseResource`. For example, `Component`'s implementation of `Resource`'s `CreateOrUpdate` method, first calls `BaseResource`'s `CreateOrUpdateDependents` and then adds further logic.
+
+Similarly, we provide a `BaseDependentResource` implementation which provides some default behavior to serve as the basis for `DependentResource` implementations.
+
+Here is how `BaseDependentResource` can be used:
+
+[source,go]
+.Using `BaseDependentResource`
+----
+package foo
+
+import (
+	framework "halkyon.io/operator-framework"
+	v1 "k8s.io/api/core/v1"
+)
+
+// Records the GVK for the underlying type we're interested in working with (here, a Pod)
+var podGVK = v1.SchemeGroupVersion.WithKind("Pod")
+
+// example is a simple, example implementation of DependentResource
+type example struct {
+	*framework.BaseDependentResource
+}
+
+// blank assignment to make sure that our struct properly implements the DependentResource interface
+var _ framework.DependentResource = &example{}
+
+// NewOwnerResource creates a new example instance given the specified owner Resource as a SerializableResource
+func NewOwnerResource(owner framework.SerializableResource) *example {
+	// Create a new, default config with the specified GVK
+	config := framework.NewConfig(podGVK)
+	// Override some of the default configuration if needed, here we want to check this dependent for its
+	// readiness when computing the owner's status
+	config.CheckedForReadiness = true
+	// Create an instance of the struct, properly initializing the embedded BaseDependentResource
+	p := &example{framework.NewConfiguredBaseDependentResource(owner, config)}
+	return p
+}
+----
+
+We can then implement the missing `DependentResource` methods, using the default implementations provided by the framework.
+
+Here is how this `example` `DependentResource` could implement the `GetCondition` method using the default implementation to set things up before checking if the underlying Pod is ready:
+
+[source,go]
+.`GetCondition` implementation using default implementation
+----
+func (res example) GetCondition(underlying runtime.Object, err error) *v1beta1.DependentCondition {
+	return framework.DefaultCustomizedGetConditionFor(res, err, underlying, func(underlying runtime.Object, cond *v1beta1.DependentCondition) {
+		pod := underlying.(*v1.Pod)
+		for _, c := range pod.Status.Conditions {
+			if c.Type == v1.PodReady {
+				cond.Type = v1beta1.DependentReady
+				if c.Status != v1.ConditionTrue {
+					cond.Type = v1beta1.DependentPending
+				}
+				cond.Message = c.Message
+				cond.Reason = c.Reason
+			}
+		}
+		return
+	})
+}
+----
+
+**TODO**
+
+== Using the framework to implement a new operator
 
 **TODO**
 
