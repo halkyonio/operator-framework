@@ -8,15 +8,21 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// BaseDependentResource provides a default implementation for several DependentResource methods. In particular, it handles the
+// DependentResource configuration and owner.
 type BaseDependentResource struct {
 	config DependentResourceConfig
 	owner  SerializableResource
 }
 
+// NewBaseDependentResource creates a new BaseDependentResource of the specified dependent type and with the specified owner.
+// The DependentResource is initialized with a default configuration as provided by NewConfig.
 func NewBaseDependentResource(owner SerializableResource, dependentType schema.GroupVersionKind) *BaseDependentResource {
 	return NewConfiguredBaseDependentResource(owner, NewConfig(dependentType))
 }
 
+// NewConfiguredBaseDependentResource creates a new BaseDependentResource with the specified configuration and with the
+// specified owner.
 func NewConfiguredBaseDependentResource(owner SerializableResource, config DependentResourceConfig) *BaseDependentResource {
 	return &BaseDependentResource{
 		config: config,
@@ -24,6 +30,8 @@ func NewConfiguredBaseDependentResource(owner SerializableResource, config Depen
 	}
 }
 
+// DefaultFetcher provides a default mechanism to fetch latest Object state underlying the specified DependentResource from the
+// cluster.
 func DefaultFetcher(dep DependentResource) (runtime.Object, error) {
 	config := dep.GetConfig()
 	into, err := Helper.Scheme.New(config.GroupVersionKind)
@@ -33,6 +41,7 @@ func DefaultFetcher(dep DependentResource) (runtime.Object, error) {
 	return Helper.Fetch(dep.Name(), dep.Owner().GetNamespace(), into)
 }
 
+// DefaultDependentResourceNameFor returns a default name for a DependentResource for a given owner.
 func DefaultDependentResourceNameFor(owner SerializableResource) string {
 	return owner.GetName()
 }
@@ -58,10 +67,17 @@ func ErrorDependentCondition(dep DependentResource, err error) *v1beta1.Dependen
 	return nil
 }
 
+// DefaultGetConditionFor provides generic DependentCondition creation for the specified DependentResource and given the
+// (possibly nil) specified error. Simply calls DefaultCustomizedGetConditionFor function with a nil customize function.
 func DefaultGetConditionFor(dep DependentResource, err error) *v1beta1.DependentCondition {
 	return DefaultCustomizedGetConditionFor(dep, err, nil, nil)
 }
 
+// DefaultCustomizedGetConditionFor provides generic DependentCondition creation for the specified DependentResource and given
+// the (possibly nil) specified error. The generated condition is set up so that it is using type DependentReady if a nil error
+// is provided, using ErrorDependentCondition if the specified error is not nil. This generated condition can then be further
+// customized with the provided customize function based on the state of the Object underlying the specified DependentResource.
+// We encourage implementers to use this function to create DependentConditions for their DependentResources.
 func DefaultCustomizedGetConditionFor(dep DependentResource, err error, underlying runtime.Object, customize func(underlying runtime.Object, cond *v1beta1.DependentCondition)) *v1beta1.DependentCondition {
 	if c := ErrorDependentCondition(dep, err); c != nil {
 		return c
@@ -78,10 +94,13 @@ func DefaultCustomizedGetConditionFor(dep DependentResource, err error, underlyi
 	return d
 }
 
+// GetConfig retrieves the DependentResourceConfig associated with this BaseDependentResource
 func (b BaseDependentResource) GetConfig() DependentResourceConfig {
 	return b.config
 }
 
+// Owner retrieves the SerializableResource owning this BaseDependentResource, i.e. of which Resource has this DependentResource
+// as a dependent.
 func (b BaseDependentResource) Owner() SerializableResource {
 	return b.owner
 }
