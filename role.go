@@ -7,16 +7,33 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// Records the GroupVersionKind for Roles
 var RoleGVK = authorizv1.SchemeGroupVersion.WithKind("Role")
 
+// NeedsRole encapsulates the behavior that must be provided by Resources requiring a role
 type NeedsRole interface {
+	// GetRoleName specifies which name the role should have
 	GetRoleName() string
+	// Owner returns the Resource owning the Role this NeedsRole instance is associated with
 	Owner() SerializableResource
 }
 
+// Role is a DependentResource representing a Kubernetes Role, designed to be reused in different contexts since it is a common
+// use case that Resources need Roles to be properly used.
 type Role struct {
+	// Provides the base behavior
 	*BaseDependentResource
+	// NeedsRole owner to which some behavior is delegated
 	Delegate NeedsRole
+}
+
+var _ DependentResource = &Role{}
+
+// NewOwnedRole creates a new Role instance using the specified NeedsRole instance as owner and delegate
+func NewOwnedRole(owner NeedsRole) Role {
+	role := Role{BaseDependentResource: NewBaseDependentResource(owner.Owner(), RoleGVK), Delegate: owner}
+	role.config.Watched = false
+	return role
 }
 
 func (res Role) Fetch() (runtime.Object, error) {
@@ -27,16 +44,8 @@ func (res Role) GetCondition(_ runtime.Object, err error) *v1beta1.DependentCond
 	return DefaultGetConditionFor(res, err)
 }
 
-var _ DependentResource = &Role{}
-
 func (res Role) Update(_ runtime.Object) (bool, runtime.Object, error) {
 	return false, nil, nil
-}
-
-func NewOwnedRole(owner NeedsRole) Role {
-	role := Role{BaseDependentResource: NewBaseDependentResource(owner.Owner(), RoleGVK), Delegate: owner}
-	role.config.Watched = false
-	return role
 }
 
 func (res Role) Name() string {
