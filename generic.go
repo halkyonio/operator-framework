@@ -19,12 +19,18 @@ import (
 	"sync"
 )
 
-func NewGenericReconciler(resource Resource) *GenericReconciler {
-	return &GenericReconciler{resource: resource}
-}
-
+// GenericReconciler implements Reconciler in a generic way as it pertains to reconciling a Resource
 type GenericReconciler struct {
 	resource Resource
+}
+
+// blank assignment to make sure we implement Reconciler
+var _ reconcile.Reconciler = &GenericReconciler{}
+
+// NewGenericReconciler creates a new GenericReconciler that can handle resources represented by the specified Resource, which
+// acts as a prototype standing in for instances that will be reconciled.
+func NewGenericReconciler(resource Resource) *GenericReconciler {
+	return &GenericReconciler{resource: resource}
 }
 
 func (b *GenericReconciler) logger() logr.Logger {
@@ -33,13 +39,14 @@ func (b *GenericReconciler) logger() logr.Logger {
 
 func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	b.logger().WithValues("namespace", request.Namespace)
+	typeName := util.GetObjectName(b.resource)
 
-	// Fetch the primary resource
+	// Get a new empty instance from the prototype
 	resource := b.resource.NewEmpty()
+	// Initialize it from the cluster state, using the name / namespace from the reconcile request
 	resource.SetName(request.Name)
 	resource.SetNamespace(request.Namespace)
 	_, err := Helper.Fetch(request.Name, request.Namespace, resource.GetUnderlyingAPIResource())
-	typeName := util.GetObjectName(b.resource)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Return and don't create
@@ -114,6 +121,8 @@ func (b *GenericReconciler) Reconcile(request reconcile.Request) (reconcile.Resu
 	return reconcile.Result{Requeue: requeue}, nil
 }
 
+// UpdateStatusIfNeeded updates the status of the specified Resource, computing its status or handling the specified error
+// if it's not nil
 func UpdateStatusIfNeeded(instance Resource, err error) error {
 	// update the resource if the status has changed
 	object := instance.GetUnderlyingAPIResource()
@@ -138,6 +147,8 @@ func UpdateStatusIfNeeded(instance Resource, err error) error {
 	return nil
 }
 
+// RegisterNewReconciler creates a new GenericReconciler for the specified Resource and register it with the specified Manager,
+// setting up watches as needed depending on the Resource and its DependentResources configuration
 func RegisterNewReconciler(resource Resource, mgr manager.Manager) error {
 	resourceType := resource.GetUnderlyingAPIResource()
 
